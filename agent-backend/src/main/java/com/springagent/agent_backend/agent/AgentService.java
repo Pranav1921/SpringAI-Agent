@@ -512,24 +512,30 @@ public class WebSocketController {
             Make every application visually distinct, state-of-the-art, and fully functional.
             """;
 
-        String modelResponse = callModel(systemPrompt, currentPrompt);
-        boolean hadToolCall = false;
+        boolean isGitOnly = actualTaskPrompt.toLowerCase().matches("^(?:git\\s+.*|create\\s+(?:a\\s+)?(?:new\\s+)?(?:git\\s+)?repo.*|push\\s+(?:to\\s+github|commits?|changes?).*|commit\\s+and\\s+push.*)");
 
-        if (modelResponse != null && !modelResponse.isBlank()) {
-            hadToolCall = executeToolCallsAndCodeBlocks(modelResponse, actualTaskPrompt, writtenFiles);
-        }
+        if (!isGitOnly) {
+            String modelResponse = callModel(systemPrompt, currentPrompt);
+            boolean hadToolCall = false;
 
-        // Guaranteed file synthesis fallback if no files were generated or if web assets are missing
-        boolean hasHtml = writtenFiles.stream().anyMatch(f -> f.endsWith(".html"));
-        boolean hasCss = writtenFiles.stream().anyMatch(f -> f.endsWith(".css"));
-        boolean hasJs = writtenFiles.stream().anyMatch(f -> f.endsWith(".js"));
+            if (modelResponse != null && !modelResponse.isBlank()) {
+                hadToolCall = executeToolCallsAndCodeBlocks(modelResponse, actualTaskPrompt, writtenFiles);
+            }
 
-        if (!hadToolCall || writtenFiles.isEmpty()) {
-            System.out.println("⚡ [ENGINEERING SYNTHESIS] Generating complete autonomous application files for: " + actualTaskPrompt);
-            executeDirectAutonomousSynthesis(actualTaskPrompt, writtenFiles);
-        } else if (hasHtml && (!hasCss || !hasJs)) {
-            System.out.println("⚡ [ENGINEERING SYNTHESIS] Complementing missing styling & script assets for: " + actualTaskPrompt);
-            executeDirectAutonomousSynthesis(actualTaskPrompt, writtenFiles);
+            // Guaranteed file synthesis fallback if no files were generated or if web assets are missing
+            boolean hasHtml = writtenFiles.stream().anyMatch(f -> f.endsWith(".html"));
+            boolean hasCss = writtenFiles.stream().anyMatch(f -> f.endsWith(".css"));
+            boolean hasJs = writtenFiles.stream().anyMatch(f -> f.endsWith(".js"));
+
+            if (!hadToolCall || writtenFiles.isEmpty()) {
+                System.out.println("⚡ [ENGINEERING SYNTHESIS] Generating complete autonomous application files for: " + actualTaskPrompt);
+                executeDirectAutonomousSynthesis(actualTaskPrompt, writtenFiles);
+            } else if (hasHtml && (!hasCss || !hasJs)) {
+                System.out.println("⚡ [ENGINEERING SYNTHESIS] Complementing missing styling & script assets for: " + actualTaskPrompt);
+                executeDirectAutonomousSynthesis(actualTaskPrompt, writtenFiles);
+            }
+        } else {
+            broadcastEvent(new AgentEvent("THOUGHT", "DEVOPS", "DevOps Agent: Pure Git operation detected. Preserving all existing workspace files and proceeding directly with Git repository creation & push.", Map.of("role", "DEVOPS")));
         }
 
         // 3. QA TESTER AGENT PHASE
@@ -558,8 +564,8 @@ public class WebSocketController {
         broadcastEvent(new AgentEvent("THOUGHT", "DEVOPS", "DevOps Agent: Creating git checkpoint snapshot and bundling live preview runner.", Map.of("role", "DEVOPS")));
         checkpointService.createCheckpoint("Completed: " + (actualTaskPrompt.length() > 30 ? actualTaskPrompt.substring(0, 30) : actualTaskPrompt));
 
-        if (actualTaskPrompt.toLowerCase().contains("push") || actualTaskPrompt.toLowerCase().contains("github") || actualTaskPrompt.toLowerCase().contains("git")) {
-            handleGitPushSequence();
+        if (actualTaskPrompt.toLowerCase().contains("push") || actualTaskPrompt.toLowerCase().contains("github") || actualTaskPrompt.toLowerCase().contains("git") || actualTaskPrompt.toLowerCase().contains("repo")) {
+            handleGitPushSequence(actualTaskPrompt);
         }
 
         broadcastEvent(new AgentEvent("SWARM_STATUS", "SWARM", "All agents completed successfully.", Map.of("role", "COMPLETE", "status", "completed")));
@@ -567,84 +573,109 @@ public class WebSocketController {
         return "Task completed successfully.";
     }
 
-    private List<Map<String, Object>> runQaValidationSuite(List<String> files) {
-        List<Map<String, Object>> tests = new ArrayList<>();
-        tests.add(Map.of(
-            "name", "HTML Structure & DOM Hierarchy",
-            "status", "PASSED",
-            "description", "Valid semantic tree, DOCTYPE declaration, meta tags, and root container"
-        ));
-        tests.add(Map.of(
-            "name", "CSS Design Tokens & Viewport Styling",
-            "status", "PASSED",
-            "description", "CSS variables, responsive viewport definitions, flexbox/grid alignments"
-        ));
-        tests.add(Map.of(
-            "name", "JavaScript Logic & Event Listeners",
-            "status", "PASSED",
-            "description", "Runtime event handlers, state transitions, async/await bindings"
-        ));
-        tests.add(Map.of(
-            "name", "Live Preview Sandboxed Runner",
-            "status", "PASSED",
-            "description", "Cross-origin sandbox isolation and port 3000 / static serving readiness"
-        ));
-        return tests;
-    }
-
-    private Map<String, Object> runSecurityAudit(List<String> files) {
-        List<Map<String, Object>> checks = new ArrayList<>();
-        checks.add(Map.of("name", "Hardcoded API Keys & Secrets", "status", "PASSED", "detail", "0 plain-text tokens detected in source files"));
-        checks.add(Map.of("name", "XSS & Unsanitized InnerHTML", "status", "PASSED", "detail", "No dangerously unescaped script injections found"));
-        checks.add(Map.of("name", "Path Traversal & Sandboxing", "status", "PASSED", "detail", "Workspace root path boundaries strictly enforced"));
-        checks.add(Map.of("name", "Secure External Dependencies", "status", "PASSED", "detail", "All CDN references use HTTPS and validated hashes"));
-
-        Map<String, Object> report = new HashMap<>();
-        report.put("score", 98);
-        report.put("grade", "A+");
-        report.put("vulnerabilities", 0);
-        report.put("checks", checks);
-        return report;
-    }
-
-    private void handleGitPushSequence() {
-        broadcastEvent(new AgentEvent("THOUGHT", "AGENT", "Preparing to stage, commit, and push changes to Git..."));
+    private void handleGitPushSequence(String taskPrompt) {
+        broadcastEvent(new AgentEvent("SWARM_STATUS", "DEVOPS", "DevOps Agent: Initializing Git and preparing repository...", Map.of("role", "DEVOPS", "status", "active")));
+        broadcastEvent(new AgentEvent("THOUGHT", "DEVOPS", "DevOps Agent: Analyzing Git prompt instructions, staging files, creating commit, and checking remote push targets...", Map.of("role", "DEVOPS")));
+        
         terminalTool.ensureGitInitialized();
 
-        broadcastEvent(new AgentEvent("ACTION", "TOOL:gitAdd", "git add -A"));
+        // 1. Stage all workspace files
+        broadcastEvent(new AgentEvent("ACTION", "TOOL:gitAdd", "git add -A", Map.of("role", "DEVOPS")));
         String addRes = terminalTool.executeCommand("git add -A");
-        broadcastEvent(new AgentEvent("OBSERVATION", "GIT", addRes.isBlank() ? "Staged all workspace files." : addRes));
+        broadcastEvent(new AgentEvent("OBSERVATION", "GIT", addRes.isBlank() ? "Staged all workspace files for commit." : addRes, Map.of("role", "DEVOPS")));
 
-        broadcastEvent(new AgentEvent("ACTION", "TOOL:gitCommit", "git commit -m \"feat: autonomous synthesis by Spring Agent\""));
-        String commitRes = terminalTool.executeCommand("git commit -m \"feat: autonomous synthesis by Spring Agent\"");
-        broadcastEvent(new AgentEvent("OBSERVATION", "GIT", commitRes.isBlank() ? "Nothing new to commit (workspace up to date)." : commitRes));
-
-        String remotes = terminalTool.executeCommand("git remote");
-        if (remotes.isBlank() || !remotes.contains("origin")) {
-            broadcastEvent(new AgentEvent("DECISION", "AGENT", 
-                "Workspace committed locally on branch 'main'. To push to GitHub, please enter your repository URL (e.g., https://github.com/username/repo.git) in the chat below:",
-                Map.of("options", List.of(
-                    Map.of("id", "keep_local", "label", "Keep Local (I'll push later)", "action", "keep_local")
-                ))
-            ));
-            return;
-        }
-
-        broadcastEvent(new AgentEvent("ACTION", "TOOL:gitPush", "git push -u origin main"));
-        String pushRes = terminalTool.executeCommand("git push -u origin main");
-        broadcastEvent(new AgentEvent("OBSERVATION", "GIT", pushRes.isBlank() ? "Branch successfully pushed to GitHub origin/main." : pushRes));
-
-        if (pushRes.toLowerCase().contains("fatal") || pushRes.toLowerCase().contains("error")) {
-            broadcastEvent(new AgentEvent("DECISION", "AGENT", 
-                "Git push to origin/main failed:\n```\n" + pushRes + "\n```\nPlease provide a new repository URL or authenticate credentials:",
-                Map.of("options", List.of(
-                    Map.of("id", "retry", "label", "Retry Push to origin main", "action", "execute"),
-                    Map.of("id", "keep_local", "label", "Keep Local Commit", "action", "keep_local")
-                ))
-            ));
+        // 2. Derive descriptive commit message from prompt
+        String commitMsg = "feat: autonomous synthesis by Spring AI Agent";
+        Pattern commitPattern = Pattern.compile("(?i)commit\\s+(?:with\\s+message\\s+|message\\s+|msg\\s+|as\\s+)?[\"']([^\"']+)[\"']");
+        Matcher commitMatcher = commitPattern.matcher(taskPrompt);
+        if (commitMatcher.find()) {
+            commitMsg = commitMatcher.group(1).trim();
         } else {
-            broadcastEvent(new AgentEvent("FINISH", "AGENT", "Workspace committed and pushed to GitHub successfully!"));
+            String cleanTask = taskPrompt.replaceAll("(?i)(build|create|make|push|git|repo|repository|to|on|github|and)\\b", "").trim();
+            if (!cleanTask.isBlank()) {
+                commitMsg = "feat: " + (cleanTask.length() > 45 ? cleanTask.substring(0, 45) + "..." : cleanTask);
+            }
         }
+        String sanitizedCommitMsg = commitMsg.replace("\"", "\\\"");
+
+        broadcastEvent(new AgentEvent("ACTION", "TOOL:gitCommit", "git commit -m \"" + sanitizedCommitMsg + "\"", Map.of("role", "DEVOPS")));
+        String commitRes = terminalTool.executeCommand("git commit -m \"" + sanitizedCommitMsg + "\"");
+        broadcastEvent(new AgentEvent("OBSERVATION", "GIT", commitRes.isBlank() ? "Workspace committed cleanly." : commitRes, Map.of("role", "DEVOPS")));
+        terminalTool.executeCommand("git branch -M main");
+
+        // 3. Extract target repository URL or repository name from prompt
+        String repoUrl = null;
+        Pattern urlPattern = Pattern.compile("(https?://github\\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+(?:\\.git)?)");
+        Matcher urlMatcher = urlPattern.matcher(taskPrompt);
+        if (urlMatcher.find()) {
+            repoUrl = urlMatcher.group(1).trim();
+        }
+
+        String explicitRepoName = null;
+        Pattern repoNamePattern = Pattern.compile("(?i)(?:create\\s+(?:a\\s+)?(?:new\\s+)?(?:git\\s+)?repo(?:sitory)?\\s+(?:called\\s+|named\\s+)?|repo(?:sitory)?\\s*:\\s*|repo\\s+)([a-zA-Z0-9_.-]+)");
+        Matcher nameMatcher = repoNamePattern.matcher(taskPrompt);
+        if (nameMatcher.find()) {
+            explicitRepoName = nameMatcher.group(1).trim().replaceAll("[^a-zA-Z0-9._-]", "-");
+        }
+
+        if (explicitRepoName == null || explicitRepoName.isBlank() || explicitRepoName.equalsIgnoreCase("github") || explicitRepoName.equalsIgnoreCase("it")) {
+            String derived = taskPrompt.replaceAll("(?i)(build|create|make|push|git|repo|repository|to|on|github|and|a|an|the|commits?)\\b", "").replaceAll("[^a-zA-Z0-9\\s]", "").trim();
+            if (!derived.isBlank()) {
+                String[] words = derived.split("\\s+");
+                explicitRepoName = (words.length > 0 ? words[0].toLowerCase() : "spring-agent-app") + "-app";
+            } else {
+                explicitRepoName = "spring-ai-autonomous-app";
+            }
+        }
+
+        // 4. If direct GitHub URL was provided in prompt, set origin and push
+        if (repoUrl != null && !repoUrl.isBlank()) {
+            broadcastEvent(new AgentEvent("ACTION", "TOOL:gitRemote", "Setting remote origin -> " + repoUrl, Map.of("role", "DEVOPS")));
+            terminalTool.executeCommand("git remote remove origin");
+            terminalTool.executeCommand("git remote add origin " + repoUrl);
+            
+            broadcastEvent(new AgentEvent("ACTION", "TOOL:gitPush", "git push -u origin main", Map.of("role", "DEVOPS")));
+            String pushRes = terminalTool.executeCommand("git push -u origin main");
+            broadcastEvent(new AgentEvent("OBSERVATION", "GIT", pushRes.isBlank() ? "Branch successfully pushed to " + repoUrl : pushRes, Map.of("role", "DEVOPS")));
+
+            if (!pushRes.toLowerCase().contains("fatal") && !pushRes.toLowerCase().contains("error")) {
+                broadcastEvent(new AgentEvent("FINISH", "AGENT", "Repository synchronized and pushed to " + repoUrl + " successfully!"));
+                return;
+            }
+        }
+
+        // 5. Try creating repository via GitHub CLI (`gh repo create`)
+        if (taskPrompt.toLowerCase().contains("create") || taskPrompt.toLowerCase().contains("new") || repoUrl == null) {
+            broadcastEvent(new AgentEvent("ACTION", "TOOL:ghRepoCreate", "gh repo create " + explicitRepoName + " --public --source=. --remote=origin --push", Map.of("role", "DEVOPS")));
+            String ghRes = terminalTool.executeCommand("gh repo create " + explicitRepoName + " --public --source=. --remote=origin --push");
+            broadcastEvent(new AgentEvent("OBSERVATION", "GIT", ghRes.isBlank() ? "gh repo create command executed." : ghRes, Map.of("role", "DEVOPS")));
+
+            if (ghRes.contains("github.com") && !ghRes.toLowerCase().contains("error") && !ghRes.toLowerCase().contains("failed")) {
+                broadcastEvent(new AgentEvent("FINISH", "AGENT", "GitHub repository '" + explicitRepoName + "' created and pushed successfully: https://github.com/" + explicitRepoName));
+                return;
+            }
+        }
+
+        // 6. Check existing remotes
+        String remotes = terminalTool.executeCommand("git remote");
+        if (remotes.contains("origin")) {
+            broadcastEvent(new AgentEvent("ACTION", "TOOL:gitPush", "git push -u origin main", Map.of("role", "DEVOPS")));
+            String pushRes = terminalTool.executeCommand("git push -u origin main");
+            broadcastEvent(new AgentEvent("OBSERVATION", "GIT", pushRes.isBlank() ? "Pushed to existing origin/main." : pushRes, Map.of("role", "DEVOPS")));
+            if (!pushRes.toLowerCase().contains("fatal") && !pushRes.toLowerCase().contains("error")) {
+                broadcastEvent(new AgentEvent("FINISH", "AGENT", "Workspace committed and pushed to GitHub origin/main successfully!"));
+                return;
+            }
+        }
+
+        // 7. Prompt user with clear interactive options if remote credentials are needed
+        broadcastEvent(new AgentEvent("DECISION", "AGENT", 
+            "Workspace committed locally on branch 'main' (" + sanitizedCommitMsg + "). To push to GitHub, authenticate or provide your remote repository URL (e.g., https://github.com/username/" + explicitRepoName + ".git):",
+            Map.of("options", List.of(
+                Map.of("id", "create_gh", "label", "Create & Push with GitHub CLI (gh auth login)", "action", "gh_auth"),
+                Map.of("id", "keep_local", "label", "Keep Local Commit", "action", "keep_local")
+            ))
+        ));
     }
 
     public List<Map<String, Object>> generatePlanChecklist(String prompt) {
@@ -678,7 +709,19 @@ public class WebSocketController {
             return steps;
         }
 
-        // 2. Dynamic prompt decomposition for ANY project or domain
+        // 2. Pure Git Operations Checklist
+        if (lower.startsWith("git ") || lower.contains("create repo") || lower.contains("create a repo") || lower.contains("push commits") || lower.startsWith("push to") || lower.contains("commit and push")) {
+            boolean isAppBuild = lower.contains("build") || lower.contains("make") || lower.contains("app") || lower.contains("game") || lower.contains("clone");
+            if (!isAppBuild) {
+                steps.add(Map.of("id", "1", "file", "git", "label", "Initialize Git & stage workspace files (git add -A)", "status", "pending"));
+                steps.add(Map.of("id", "2", "file", "git", "label", "Create commit with descriptive prompt message", "status", "pending"));
+                steps.add(Map.of("id", "3", "file", "git", "label", "Create GitHub repository or link remote origin", "status", "pending"));
+                steps.add(Map.of("id", "4", "file", "git", "label", "Push main branch to GitHub origin", "status", "pending"));
+                return steps;
+            }
+        }
+
+        // 3. Dynamic prompt decomposition for ANY project or domain
         String cleanPrompt = prompt.replaceAll("(?i)(build|create|make|develop|implement|generate|an|a|the)\\b", "").trim();
         String[] clauses = cleanPrompt.split("[,;\\n]|(?i)\\b(and|with|including|having)\\b");
         List<String> validClauses = new ArrayList<>();
