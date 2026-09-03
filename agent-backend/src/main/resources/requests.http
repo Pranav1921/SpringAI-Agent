@@ -1,0 +1,81 @@
+### 1. Send an Agent Mode Task (Autonomous Reason + Act with Sandbox Execution)
+POST http://localhost:8080/api/task
+Content-Type: application/json
+
+{
+  "prompt": "Build a real-time reactive counter application with dark mode in index.html",
+  "mode": "agent"
+}
+
+### 2. Send an Ask Mode Request (Conversational Architecture Q&A)
+POST http://localhost:8080/api/task
+Content-Type: application/json
+
+{
+  "prompt": "Explain how to architect a secure Docker sandbox with memory and CPU cgroups",
+  "mode": "ask"
+}
+
+### 3. Connect to Server-Sent Events (SSE) Stream
+GET http://localhost:8080/api/agent/events
+Accept: text/event-stream
+
+### 4. Fetch User Profile
+GET http://localhost:8080/api/user
+
+### 5. Fetch GitHub Repositories for Wiki Tab
+GET http://localhost:8080/api/git/repos
+
+### 6. Fetch Git Workspace Status
+GET http://localhost:8080/api/git/status
+
+### 7. Fetch Git Unified Diff
+GET http://localhost:8080/api/git/diff
+
+### 8. Fetch Docker Sandbox Status
+GET http://localhost:8080/api/docker/status
+
+### 9. Fetch Workspace File Tree
+GET http://localhost:8080/api/workspace/files
+
+### 10. Fetch Specific File Content
+GET http://localhost:8080/api/workspace/file-content?path=index.html
+
+### 11. Fetch Dynamic Skills Library
+GET http://localhost:8080/api/skills
+
+### 12. Create / Update Custom Domain Skill
+POST http://localhost:8080/api/skills
+Content-Type: application/json
+
+{
+  "name": "FastAPI Microservices",
+  "description": "FastAPI async endpoints with Pydantic v2 validation",
+  "icon": "⚡",
+  "tags": ["fastapi", "pydantic", "async", "python"],
+  "enabled": true,
+  "custom": true,
+  "content": "# FastAPI Guidelines\n* Use async def for I/O operations\n* Define response_model schemas"
+}
+
+### 13. Toggle Skill On/Off
+POST http://localhost:8080/api/skills/web/toggle
+
+### 14. Fetch Agent Personas
+GET http://localhost:8080/api/personas
+
+### 15. Save Custom Persona Directive
+POST http://localhost:8080/api/personas
+Content-Type: application/json
+
+{
+  "id": "architect",
+  "name": "Architect Agent",
+  "role": "ARCHITECT",
+  "icon": "📐",
+  "color": "purple",
+  "description": "Analyzes project requirements and creates structural blueprints.",
+  "systemPrompt": "You are the Lead Systems Architect. Break down requirements into modular components.",
+  "temperature": 0.35,
+  "active": true
+}

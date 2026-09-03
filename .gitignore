@@ -1,0 +1,31 @@
+# OS & IDE
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# Backend - Maven & Java
+**/target/
+**/.mvn/wrapper/maven-wrapper.jar
+*.class
+*.log
+
+# Frontend - Node & Angular / Vite
+**/node_modules/
+**/dist/
+**/.angular/
+.npm
+*.tsbuildinfo
+
+# Workspace & Temp
+workspace/
+agent-backend/new/
+agent-backend/neww/
+agent-backend/New folder/
+
+# Secrets & Local Config
+.env
+.env.local
+*.local

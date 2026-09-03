@@ -1,0 +1,32 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: spring-ai-autonomous-dev
+  ai:
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        options:
+          model: ${OLLAMA_MODEL:deepseek-coder}
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT_ID:mock-client-id}
+            client-secret: ${GITHUB_CLIENT_SECRET:mock-client-secret}
+            scope:
+              - read:user
+              - user:email
+              - repo
+
+agent:
+  workspace:
+    path: ${AGENT_WORKSPACE_PATH:workspace}
+  sandbox:
+    container-name: agent-sandbox
+    memory: 1g
+    cpus: 2.0
+    preview-port: 3000

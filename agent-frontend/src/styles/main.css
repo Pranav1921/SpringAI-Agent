@@ -1,0 +1,214 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-black: #0e0e0f;
+  --bg-subtle: #131314;
+  --bg-card: #1e1f20;
+  --bg-hover: #282a2c;
+  --border-muted: rgba(255, 255, 255, 0.1);
+  --border-active: rgba(138, 180, 248, 0.4);
+  --text-primary: #e3e3e3;
+  --text-secondary: #c4c7c5;
+  --text-muted: #8e918f;
+  --google-blue: #8ab4f8;
+  --google-blue-dark: #1a73e8;
+  --gemini-gradient: linear-gradient(135deg, #4285f4 0%, #9b72cb 50%, #d96570 100%);
+  --accent: #81c995;
+  --accent-glow: rgba(129, 201, 149, 0.25);
+}
+
+body {
+  background-color: #0e0e0f;
+  color: #e3e3e3;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #282a2c;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Smooth Fade & Micro-Interactions */
+.fade-in, .animate-fadeIn {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Minimal Dotted Thinking Loader Animation */
+@keyframes bounceDot {
+  0%, 80%, 100% {
+    transform: translateY(0) scale(0.7);
+    opacity: 0.35;
+  }
+  40% {
+    transform: translateY(-4px) scale(1.15);
+    opacity: 1;
+    background-color: #8ab4f8;
+    box-shadow: 0 0 8px #8ab4f8;
+  }
+}
+
+.thinking-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #8ab4f8;
+  animation: bounceDot 1.2s infinite ease-in-out both;
+}
+
+.thinking-dot-1 {
+  animation-delay: -0.32s;
+}
+
+.thinking-dot-2 {
+  animation-delay: -0.16s;
+}
+
+.thinking-dot-3 {
+  animation-delay: 0s;
+}
+
+/* Premium Thinking Card & Shimmer */
+@keyframes shimmerWave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.thinking-card {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+.shimmer-line {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(138, 180, 248, 0.2) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmerWave 2s infinite linear;
+  border-radius: 6px;
+}
+
+/* Resizer handle visual */
+.resizer-handle {
+  width: 5px;
+  cursor: col-resize;
+  background-color: #282a2c;
+  transition: background-color 0.2s, width 0.1s;
+  z-index: 30;
+  flex-shrink: 0;
+}
+
+.resizer-handle:hover, .resizer-handle:active {
+  background-color: #8ab4f8;
+  box-shadow: 0 0 10px rgba(138, 180, 248, 0.6);
+  width: 6px;
+}
+
+/* Google AI Studio Specific Classes */
+.gemini-gradient-text {
+  background: linear-gradient(135deg, #8ab4f8 0%, #c58af9 50%, #f28b82 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gemini-gradient-bg {
+  background: linear-gradient(135deg, #1a73e8 0%, #7b1fa2 100%);
+}
+
+.gemini-pill {
+  background: rgba(138, 180, 248, 0.1);
+  border: 1px solid rgba(138, 180, 248, 0.3);
+  color: #8ab4f8;
+}
+
+.google-range-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: #282a2c;
+  border-radius: 2px;
+  outline: none;
+}
+
+.google-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #8ab4f8;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(138, 180, 248, 0.5);
+  transition: transform 0.1s, background-color 0.1s;
+}
+
+.google-range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: #ffffff;
+}
+
+.btn-action {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-action:hover {
+  transform: translateY(-1px);
+}
+.btn-action:active {
+  transform: scale(0.97);
+}
