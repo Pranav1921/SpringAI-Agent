@@ -1,6 +1,5 @@
 package com.springagent.agent_backend.tools;
 
-import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -90,7 +89,6 @@ public class TerminalTool {
         }
     }
 
-    @Tool(description = "Execute a shell command securely inside the Docker sandbox workspace.")
     public String executeCmd(String command) {
         return executeCommand(command);
     }

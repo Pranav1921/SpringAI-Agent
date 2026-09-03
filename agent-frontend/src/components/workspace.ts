@@ -1566,24 +1566,97 @@ export class WorkspaceComponent {
       }
     });
 
+    if (currentList.length === 0 && !this.isExecuting && !this.isStreamingCode) {
+      return `
+        <div class="empty-state-card w-full py-8 sm:py-12 px-4 flex flex-col items-center justify-center text-center animate-fadeIn space-y-6">
+          <div class="relative flex items-center justify-center">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-[#1a73e8] via-[#9b72cb] to-[#81c995] p-[1.5px] shadow-[0_0_30px_rgba(138,180,248,0.25)]">
+              <div class="w-full h-full bg-[#111218] rounded-[22px] flex items-center justify-center">
+                <svg class="w-8 h-8 sm:w-10 sm:h-10" viewBox="0 0 24 24">
+                  <defs>
+                    <linearGradient id="gemEmptyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#8ab4f8"/>
+                      <stop offset="50%" stop-color="#c58af9"/>
+                      <stop offset="100%" stop-color="#81c995"/>
+                    </linearGradient>
+                  </defs>
+                  <path fill="url(#gemEmptyGrad)" d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
+                </svg>
+              </div>
+            </div>
+            <span class="absolute -bottom-1 -right-1 flex h-4 w-4">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#81c995] opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-4 w-4 bg-[#81c995] border-2 border-[#111218]"></span>
+            </span>
+          </div>
+
+          <div class="space-y-2 max-w-xl">
+            <h2 class="text-xl sm:text-2xl font-extrabold text-white font-heading tracking-tight">
+              Spring AI <span class="gemini-gradient-text">Autonomous Engineer</span>
+            </h2>
+            <p class="text-xs sm:text-sm text-[#8e918f] leading-relaxed">
+              Architect, code, test, and deploy entire full-stack applications in your workspace with multi-agent intelligence.
+            </p>
+          </div>
+
+          <!-- Quick Suggestion Starter Prompt Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl pt-2 text-left">
+            <div class="btn-quick-prompt p-3.5 bg-[#16171f]/80 hover:bg-[#1f202c] border border-[rgba(255,255,255,0.08)] hover:border-[#8ab4f8]/50 rounded-2xl cursor-pointer transition-all duration-200 group shadow-md hover:shadow-[0_4px_20px_rgba(138,180,248,0.15)]" data-prompt="Build a modern full-stack analytics dashboard with real-time charts, metric cards, dark theme, and interactive filters.">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-6 h-6 rounded-lg bg-[#1a73e8]/20 flex items-center justify-center text-xs">🚀</span>
+                <span class="text-xs font-bold text-white group-hover:text-[#8ab4f8] transition">Analytics Dashboard</span>
+              </div>
+              <p class="text-[11px] text-[#8e918f] line-clamp-2">Full-stack metric charts, interactive telemetry, and responsive dark glass UI.</p>
+            </div>
+
+            <div class="btn-quick-prompt p-3.5 bg-[#16171f]/80 hover:bg-[#1f202c] border border-[rgba(255,255,255,0.08)] hover:border-[#c58af9]/50 rounded-2xl cursor-pointer transition-all duration-200 group shadow-md hover:shadow-[0_4px_20px_rgba(197,138,249,0.15)]" data-prompt="Build a luxury responsive e-commerce web application with product catalog, search filters, interactive cart drawer, and modern checkout.">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-6 h-6 rounded-lg bg-[#c58af9]/20 flex items-center justify-center text-xs">🛒</span>
+                <span class="text-xs font-bold text-white group-hover:text-[#c58af9] transition">Luxury E-Commerce</span>
+              </div>
+              <p class="text-[11px] text-[#8e918f] line-clamp-2">Product showcase, instant search, cart slide-over, and checkout flow.</p>
+            </div>
+
+            <div class="btn-quick-prompt p-3.5 bg-[#16171f]/80 hover:bg-[#1f202c] border border-[rgba(255,255,255,0.08)] hover:border-[#81c995]/50 rounded-2xl cursor-pointer transition-all duration-200 group shadow-md hover:shadow-[0_4px_20px_rgba(129,201,149,0.15)]" data-prompt="Build a Kanban task management app with draggable board cards, swimlanes, tag labels, and project progress statistics.">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-6 h-6 rounded-lg bg-[#81c995]/20 flex items-center justify-center text-xs">📋</span>
+                <span class="text-xs font-bold text-white group-hover:text-[#81c995] transition">Kanban Board App</span>
+              </div>
+              <p class="text-[11px] text-[#8e918f] line-clamp-2">Drag-and-drop tasks, custom column stages, priorities, and project stats.</p>
+            </div>
+
+            <div class="btn-quick-prompt p-3.5 bg-[#16171f]/80 hover:bg-[#1f202c] border border-[rgba(255,255,255,0.08)] hover:border-[#fdd663]/50 rounded-2xl cursor-pointer transition-all duration-200 group shadow-md hover:shadow-[0_4px_20px_rgba(253,214,99,0.15)]" data-prompt="Build an interactive Retro Arcade 2D game on HTML Canvas with sound effects, particle collisions, high score tracker, and retro styling.">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-6 h-6 rounded-lg bg-[#fdd663]/20 flex items-center justify-center text-xs">🎮</span>
+                <span class="text-xs font-bold text-white group-hover:text-[#fdd663] transition">Retro Canvas Game</span>
+              </div>
+              <p class="text-[11px] text-[#8e918f] line-clamp-2">Smooth physics loop, particle fx, procedural stages, and sound synthesis.</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     return currentList.map(msg => {
+      // 1. User Message
       if (msg.sender === 'user') {
         return `
-          <div class="p-4 sm:p-5 bg-[#1e1f20] border border-[rgba(255,255,255,0.08)] rounded-2xl flex items-start gap-3.5 animate-fadeIn shadow-sm">
-            <div class="w-8 h-8 rounded-full bg-[#3c4043] flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-inner">
+          <div class="p-4 sm:p-5 bg-gradient-to-r from-[#181920] to-[#1e1f29] border border-[rgba(255,255,255,0.08)] rounded-2xl flex items-start gap-3.5 animate-fadeIn shadow-sm group">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-md ring-2 ring-white/10">
               U
             </div>
-            <div class="flex-1 min-w-0 space-y-1">
+            <div class="flex-1 min-w-0 space-y-1.5">
               <div class="flex items-center justify-between text-xs text-[#8e918f]">
-                <span class="font-semibold text-white">User</span>
-                <span class="text-[11px] font-mono">${msg.timestamp}</span>
+                <span class="font-semibold text-white tracking-wide">You</span>
+                <span class="text-[10px] font-mono text-[#71717a]">${msg.timestamp}</span>
               </div>
-              <div class="text-sm text-[#e3e3e3] whitespace-pre-wrap leading-relaxed">${msg.content}</div>
+              <div class="text-sm text-[#f0f2f5] whitespace-pre-wrap leading-relaxed select-text font-normal">${this.escapeHtml(msg.content)}</div>
             </div>
           </div>
         `;
       }
 
+      // 2. Implementation Plan Message
       if (msg.type === 'plan') {
         const totalSteps = (msg.steps && msg.steps.length > 0) ? msg.steps.length : 1;
         const completedSteps = msg.steps ? msg.steps.filter(s => s.completed).length : 0;
@@ -1593,36 +1666,51 @@ export class WorkspaceComponent {
         const displayPercent = isDone ? 100 : computedPercent;
 
         return `
-          <div class="p-5 bg-[#1e1f20] border border-[rgba(255,255,255,0.08)] rounded-2xl shadow-xl space-y-3.5 animate-fadeIn">
-            <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-2.5">
+          <div class="card-msg p-5 sm:p-6 bg-[#12131a] border border-[rgba(138,180,248,0.25)] rounded-2xl shadow-xl space-y-4 animate-fadeIn relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#8ab4f8] via-[#c58af9] to-[#81c995]"></div>
+            
+            <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-3">
               <div class="flex items-center gap-2.5">
-                <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24"><defs><linearGradient id="gemPlan" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8ab4f8"/><stop offset="100%" stop-color="#c58af9"/></linearGradient></defs><path fill="url(#gemPlan)" d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/></svg>
-                <span class="font-bold text-white text-xs uppercase font-mono">${msg.planTitle || 'Proposed Implementation Plan'}</span>
+                <div class="w-7 h-7 rounded-lg bg-[#8ab4f8]/10 border border-[#8ab4f8]/30 flex items-center justify-center">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24"><defs><linearGradient id="gemPlanGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8ab4f8"/><stop offset="100%" stop-color="#c58af9"/></linearGradient></defs><path fill="url(#gemPlanGrad)" d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/></svg>
+                </div>
+                <div>
+                  <span class="font-bold text-white text-xs uppercase font-mono tracking-wider">${msg.planTitle || 'Proposed Implementation Blueprint'}</span>
+                  <p class="text-[10px] text-[#8e918f]">Autonomous Engineering Specification</p>
+                </div>
               </div>
-              <span class="text-[11px] font-mono text-[#8e918f]">${msg.timestamp}</span>
+              <span class="text-[10px] font-mono text-[#8e918f] bg-[#181920] px-2 py-0.5 rounded-full border border-[rgba(255,255,255,0.06)]">${msg.timestamp}</span>
             </div>
+
             <p class="text-xs text-[#c4c7c5] leading-relaxed">${msg.content}</p>
 
             <!-- Real-time Progress Bar & Percentage -->
-            <div class="space-y-1.5 bg-[#131314] border border-[rgba(255,255,255,0.08)] rounded-xl p-3">
-              <div class="flex items-center justify-between text-[10px] font-mono pb-1">
-                <span class="text-[#8e918f]">Synthesis Progress</span>
+            <div class="space-y-2 bg-[#090a0f] border border-[rgba(255,255,255,0.08)] rounded-xl p-3.5">
+              <div class="flex items-center justify-between text-[11px] font-mono">
+                <span class="text-[#8e918f] flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full ${isDone ? 'bg-[#81c995]' : 'bg-[#8ab4f8] animate-pulse'}"></span>
+                  Synthesis Pipeline
+                </span>
                 <span class="${isDone ? 'text-[#81c995]' : 'text-[#8ab4f8]'} font-bold">${displayPercent}% Completed</span>
               </div>
-              <div class="w-full bg-[#1e1f20] rounded-full h-2 overflow-hidden border border-[rgba(255,255,255,0.08)]">
-                <div class="${isDone ? 'bg-[#81c995] shadow-[0_0_8px_#81c995]' : 'bg-[#8ab4f8] shadow-[0_0_8px_#8ab4f8]'} h-full transition-all duration-300" style="width: ${displayPercent}%"></div>
+              <div class="w-full bg-[#181920] rounded-full h-2.5 overflow-hidden border border-[rgba(255,255,255,0.06)]">
+                <div class="${isDone ? 'bg-gradient-to-r from-[#81c995] to-[#4ade80] shadow-[0_0_10px_#81c995]' : 'bg-gradient-to-r from-[#8ab4f8] to-[#c58af9] shadow-[0_0_10px_#8ab4f8]'} h-full transition-all duration-500" style="width: ${displayPercent}%"></div>
               </div>
             </div>
 
-            <!-- Steps List -->
-            <div class="space-y-2 bg-[#131314] border border-[rgba(255,255,255,0.08)] rounded-xl p-3">
+            <!-- Steps Checklist -->
+            <div class="space-y-2 bg-[#090a0f] border border-[rgba(255,255,255,0.08)] rounded-xl p-3.5">
               ${(msg.steps || []).map((st, idx) => `
-                <div class="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg ${st.completed ? 'text-[#81c995]' : 'text-[#e3e3e3]'}">
-                  <div class="flex items-center gap-2 truncate">
-                    <span class="w-4 h-4 rounded-full border ${st.completed ? 'bg-[#81c995] text-black border-[#81c995]' : (st.status === 'in_progress' ? 'border-[#8ab4f8] text-[#8ab4f8]' : 'border-[rgba(255,255,255,0.15)]')} flex items-center justify-center text-[10px] font-bold">${st.completed ? '✓' : idx + 1}</span>
-                    <span class="truncate font-mono">${st.label}</span>
+                <div class="flex items-center justify-between text-xs py-2 px-3 rounded-lg transition-colors ${st.completed ? 'bg-[#81c995]/5 text-[#81c995]' : (st.status === 'in_progress' ? 'bg-[#8ab4f8]/10 text-white' : 'text-[#c4c7c5]')}">
+                  <div class="flex items-center gap-2.5 truncate">
+                    <span class="w-5 h-5 rounded-full border ${st.completed ? 'bg-[#81c995] text-black border-[#81c995]' : (st.status === 'in_progress' ? 'border-[#8ab4f8] text-[#8ab4f8] bg-[#8ab4f8]/10 animate-pulse' : 'border-[rgba(255,255,255,0.15)] text-[#71717a]')} flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                      ${st.completed ? '✓' : (st.status === 'in_progress' ? '⚡' : idx + 1)}
+                    </span>
+                    <span class="truncate font-mono text-[11px]">${st.label}</span>
                   </div>
-                  <span class="text-[10px] font-mono ${st.completed ? 'text-[#81c995]' : (st.status === 'in_progress' ? 'text-[#8ab4f8] animate-pulse font-bold' : 'text-[#8e918f]')}">${st.completed ? 'DONE' : (st.status === 'in_progress' ? 'ACTIVE' : 'QUEUED')}</span>
+                  <span class="text-[10px] font-mono px-2 py-0.5 rounded-full flex-shrink-0 ${st.completed ? 'text-[#81c995] bg-[#81c995]/10' : (st.status === 'in_progress' ? 'text-[#8ab4f8] bg-[#8ab4f8]/15 animate-pulse font-bold' : 'text-[#71717a] bg-[#181920]')}">
+                    ${st.completed ? 'DONE' : (st.status === 'in_progress' ? 'ACTIVE' : 'QUEUED')}
+                  </span>
                 </div>
               `).join('')}
             </div>
@@ -1634,7 +1722,7 @@ export class WorkspaceComponent {
                     <span class="w-2 h-2 rounded-full bg-[#81c995]"></span>
                     <span>100% Complete • Codebase Ready</span>
                   </div>
-                  <button class="btn-push-plan-github px-3.5 py-1.5 bg-[#24292f] hover:bg-[#32383f] text-white rounded-full text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer border border-[rgba(255,255,255,0.2)] shadow-md" title="Create GitHub Repo & Push Codebase">
+                  <button class="btn-push-plan-github px-4 py-2 bg-[#24292f] hover:bg-[#32383f] text-white rounded-full text-xs font-mono font-bold transition flex items-center gap-2 cursor-pointer border border-[rgba(255,255,255,0.2)] shadow-md btn-action" title="Create GitHub Repo & Push Codebase">
                     <svg class="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                     <span>Push to GitHub</span>
                   </button>
@@ -1645,7 +1733,7 @@ export class WorkspaceComponent {
                   <span>Synthesizing codebase line by line...</span>
                 </div>
               ` : `
-                <button class="btn-execute-plan bg-[#1a73e8] hover:bg-[#1557b0] text-white px-5 py-2 rounded-full font-bold text-xs flex items-center gap-2 transition cursor-pointer btn-action shadow-lg" data-prompt="${this.escapeHtml(msg.taskPrompt || '')}">
+                <button class="btn-execute-plan bg-gradient-to-r from-[#1a73e8] to-[#1557b0] hover:from-[#1557b0] hover:to-[#0d47a1] text-white px-5 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 transition cursor-pointer btn-action shadow-lg hover:shadow-[0_0_16px_rgba(26,115,232,0.4)]" data-prompt="${this.escapeHtml(msg.taskPrompt || '')}">
                   <svg class="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                   <span>Run Blueprint</span>
                 </button>
@@ -1655,20 +1743,22 @@ export class WorkspaceComponent {
         `;
       }
 
+      // 3. Decision Inquiries
       if (msg.type === 'decision') {
         return `
-          <div class="p-5 bg-[#1e1f20] border border-[#8ab4f8]/40 rounded-2xl shadow-xl space-y-3.5 animate-fadeIn">
-            <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-2">
+          <div class="card-msg p-5 sm:p-6 bg-[#12131a] border border-[#c58af9]/40 rounded-2xl shadow-xl space-y-4 animate-fadeIn relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#c58af9] to-[#8ab4f8]"></div>
+            <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-2.5">
               <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-[#8ab4f8] animate-ping"></span>
-                <span class="font-bold text-white text-xs font-mono">ARCHITECTURE DECISION</span>
+                <span class="w-2.5 h-2.5 rounded-full bg-[#c58af9] animate-ping"></span>
+                <span class="font-bold text-white text-xs font-mono tracking-wider">ARCHITECTURE DECISION REQUIRED</span>
               </div>
               <span class="text-[10px] font-mono text-[#8e918f]">${msg.timestamp}</span>
             </div>
-            <p class="text-xs text-[#e3e3e3] leading-relaxed">${msg.content}</p>
-            <div class="flex flex-wrap gap-2 pt-1">
+            <p class="text-xs text-[#f0f2f5] leading-relaxed font-medium">${msg.content}</p>
+            <div class="flex flex-wrap gap-2.5 pt-1">
               ${(msg.options || []).map(opt => `
-                <button class="btn-decision-choice px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer btn-action ${msg.selectedOptionId === opt.id ? 'bg-[#8ab4f8] text-black font-extrabold shadow-[0_0_12px_rgba(138,180,248,0.4)]' : 'bg-[#282a2c] hover:bg-[#3f3f46] text-white border border-[rgba(255,255,255,0.1)]'}" data-msg-id="${msg.id}" data-opt-id="${opt.id}" data-action="${this.escapeHtml(opt.action || opt.label)}">
+                <button class="btn-decision-choice px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer btn-action ${msg.selectedOptionId === opt.id ? 'bg-[#c58af9] text-black font-extrabold shadow-[0_0_16px_rgba(197,138,249,0.5)] border border-[#c58af9]' : 'bg-[#181920] hover:bg-[#22242e] text-white border border-[rgba(255,255,255,0.1)] hover:border-[#c58af9]/50'}" data-msg-id="${msg.id}" data-opt-id="${opt.id}" data-action="${this.escapeHtml(opt.action || opt.label)}">
                   <span>${opt.label}</span>
                 </button>
               `).join('')}
@@ -1677,98 +1767,161 @@ export class WorkspaceComponent {
         `;
       }
 
+      // 4. Swarm Reasoning / Deep Thought (Collapsible)
       if (msg.type === 'thought') {
+        const isCollapsed = msg.collapsed ?? false;
         return `
-          <div class="p-3 bg-[#1e1f20]/60 border border-[rgba(255,255,255,0.06)] rounded-xl text-xs text-[#c4c7c5] flex items-start gap-2.5 shadow-sm animate-fadeIn">
-            <span class="w-2 h-2 rounded-full bg-[#8ab4f8] animate-pulse mt-1 flex-shrink-0"></span>
-            <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-[10px] font-mono font-bold text-[#8ab4f8]">${msg.role || 'THOUGHT'} AGENT</span>
-              <span class="leading-relaxed font-mono text-[#8e918f]">${msg.content}</span>
+          <div class="card-msg bg-[#111218]/90 border border-[rgba(255,255,255,0.06)] rounded-xl overflow-hidden shadow-sm animate-fadeIn" id="thoughtContainer_${msg.id}">
+            <div class="btn-thought-toggle px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] transition" data-id="${msg.id}">
+              <div class="flex items-center gap-2.5">
+                <span class="w-2 h-2 rounded-full bg-[#c58af9] animate-pulse"></span>
+                <span class="text-[11px] font-mono font-bold text-[#c58af9] uppercase tracking-wider">${msg.role || 'ARCHITECT'} REASONING</span>
+                <span class="text-[10px] text-[#71717a] font-mono">• Thought Process</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-mono text-[#71717a]">${msg.timestamp}</span>
+                <svg class="w-3.5 h-3.5 text-[#71717a] transform transition-transform duration-200 ${isCollapsed ? '' : 'rotate-180'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
+              </div>
+            </div>
+            <div class="px-3.5 pb-3 text-xs text-[#a1a1aa] font-mono leading-relaxed border-t border-[rgba(255,255,255,0.04)] pt-2.5 ${isCollapsed ? 'hidden' : ''}">
+              ${this.escapeHtml(msg.content)}
             </div>
           </div>
         `;
       }
 
+      // 5. Tool Action Card
       if (msg.type === 'action') {
         return `
-          <div class="p-3 bg-[#1e1f20] border border-[rgba(255,255,255,0.08)] rounded-xl text-xs text-white flex items-center justify-between gap-2 animate-fadeIn">
-            <div class="flex items-center gap-2 truncate">
-              <span class="text-[#8ab4f8] font-bold font-mono">TOOL:</span>
-              <span class="font-mono text-[#c4c7c5] truncate">${msg.content}</span>
+          <div class="card-msg p-3 bg-[#0d0e14] border border-[rgba(255,255,255,0.08)] rounded-xl text-xs text-white flex items-center justify-between gap-3 animate-fadeIn">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="px-2 py-0.5 rounded-md bg-[#1a73e8]/15 border border-[#1a73e8]/30 text-[#8ab4f8] font-mono text-[10px] font-bold flex-shrink-0">
+                TOOL
+              </span>
+              <span class="font-mono text-[#c4c7c5] truncate text-[11px]">${this.escapeHtml(msg.content)}</span>
             </div>
-            <span class="text-[10px] font-mono text-[#8e918f]">${msg.timestamp}</span>
+            <span class="text-[10px] font-mono text-[#71717a] flex-shrink-0">${msg.timestamp}</span>
           </div>
         `;
       }
 
+      // 6. QA Test Report
+      if (msg.type === 'test_report') {
+        return `
+          <div class="card-msg p-4 sm:p-5 bg-[#12131a] border border-[#81c995]/30 rounded-2xl shadow-xl space-y-3 animate-fadeIn">
+            <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-2">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#81c995]"></span>
+                <span class="font-bold text-white text-xs font-mono tracking-wider">${msg.title || 'QA Test Verification Suite'}</span>
+              </div>
+              <span class="text-[10px] font-mono text-[#8e918f]">${msg.timestamp}</span>
+            </div>
+            <div class="text-xs text-[#c4c7c5]">${this.renderRichMarkdown(msg.content)}</div>
+          </div>
+        `;
+      }
+
+      // 7. Security Audit
+      if (msg.type === 'security_audit') {
+        return `
+          <div class="card-msg p-4 sm:p-5 bg-[#12131a] border border-[#8ab4f8]/30 rounded-2xl shadow-xl space-y-3 animate-fadeIn">
+            <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-2">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#8ab4f8]"></span>
+                <span class="font-bold text-white text-xs font-mono tracking-wider">${msg.title || 'Autonomous Security & Lint Audit'}</span>
+              </div>
+              <span class="text-[10px] font-mono text-[#8e918f]">${msg.timestamp}</span>
+            </div>
+            <div class="text-xs text-[#c4c7c5]">${this.renderRichMarkdown(msg.content)}</div>
+          </div>
+        `;
+      }
+
+      // 8. Main Agent Response (Answer)
       if (msg.type === 'answer') {
         return `
-          <div class="p-5 sm:p-6 bg-[#131314] border border-[rgba(255,255,255,0.08)] rounded-2xl flex items-start gap-3.5 animate-fadeIn shadow-md">
-            <div class="w-8 h-8 rounded-full bg-[#1e1f20] border border-[rgba(255,255,255,0.12)] flex items-center justify-center flex-shrink-0 shadow-sm">
-              <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
-                <defs>
-                  <linearGradient id="geminiTurnGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#8ab4f8"/>
-                    <stop offset="50%" stop-color="#c58af9"/>
-                    <stop offset="100%" stop-color="#f28b82"/>
-                  </linearGradient>
-                </defs>
-                <path fill="url(#geminiTurnGrad)" d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
-              </svg>
+          <div class="card-msg p-5 sm:p-6 bg-gradient-to-b from-[#12131a] to-[#0e0f14] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(138,180,248,0.3)] rounded-2xl flex items-start gap-4 animate-fadeIn shadow-lg transition-colors">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#1a73e8] via-[#9b72cb] to-[#f28b82] p-[1.5px] flex-shrink-0 shadow-md">
+              <div class="w-full h-full bg-[#111218] rounded-[10px] flex items-center justify-center">
+                <svg class="w-5 h-5" viewBox="0 0 24 24">
+                  <defs>
+                    <linearGradient id="gemTurnGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#8ab4f8"/>
+                      <stop offset="50%" stop-color="#c58af9"/>
+                      <stop offset="100%" stop-color="#f28b82"/>
+                    </linearGradient>
+                  </defs>
+                  <path fill="url(#gemTurnGrad2)" d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
+                </svg>
+              </div>
             </div>
-            <div class="flex-1 min-w-0 space-y-2.5">
+
+            <div class="flex-1 min-w-0 space-y-3">
               <div class="flex items-center justify-between text-xs text-[#8e918f]">
                 <div class="flex items-center gap-2">
-                  <span class="font-semibold text-white">Model</span>
-                  <span class="text-[10px] bg-[#1e1f20] text-[#8ab4f8] px-2 py-0.5 rounded-full border border-[rgba(255,255,255,0.08)]">Spring AI Pro</span>
+                  <span class="font-bold text-white tracking-wide">Spring AI Autonomous Model</span>
+                  <span class="text-[10px] bg-[#1a73e8]/15 text-[#8ab4f8] px-2 py-0.5 rounded-full border border-[#1a73e8]/30 font-mono">Verified</span>
                 </div>
-                <span class="text-[11px] font-mono">${msg.timestamp}</span>
+                <span class="text-[10px] font-mono text-[#71717a]">${msg.timestamp}</span>
               </div>
-              <div class="text-sm text-[#e3e3e3] leading-relaxed">
+
+              <div class="markdown-content select-text">
                 ${this.renderRichMarkdown(msg.content)}
               </div>
-              <div class="flex items-center gap-2 pt-2 text-xs text-[#8e918f] border-t border-[rgba(255,255,255,0.06)]">
-                <button class="btn-copy-turn hover:text-white px-2.5 py-1 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] transition flex items-center gap-1.5 cursor-pointer text-[11px]" data-text="${this.escapeHtml(msg.content)}">
+
+              <div class="flex items-center gap-2 pt-3 text-xs text-[#8e918f] border-t border-[rgba(255,255,255,0.06)]">
+                <button class="btn-copy-turn hover:text-white px-3 py-1.5 rounded-lg bg-[#181920] hover:bg-[#22242e] border border-[rgba(255,255,255,0.06)] transition flex items-center gap-1.5 cursor-pointer text-[11px] btn-action" data-text="${this.escapeHtml(msg.content)}">
                   <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                  <span>Copy</span>
+                  <span>Copy Response</span>
                 </button>
+
+                <div class="flex items-center gap-1 ml-1">
+                  <button class="btn-feedback-thumb p-1.5 rounded-lg hover:bg-[#181920] text-[#71717a] hover:text-[#81c995] transition cursor-pointer" title="Helpful response">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                  </button>
+                  <button class="btn-feedback-thumb p-1.5 rounded-lg hover:bg-[#181920] text-[#71717a] hover:text-[#f28b82] transition cursor-pointer" title="Report issue">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path></svg>
+                  </button>
+                </div>
+
                 <div class="flex-1"></div>
-                <span class="text-[11px] text-[#5f6368] font-mono">deepseek-coder:6.7b</span>
+                <span class="text-[10px] text-[#71717a] font-mono hidden sm:inline">deepseek-coder:6.7b</span>
               </div>
             </div>
           </div>
         `;
       }
 
+      // Default message fallback
       return `
-        <div class="p-3.5 bg-[#1e1f20] border border-[rgba(255,255,255,0.08)] rounded-xl text-xs text-white leading-relaxed animate-fadeIn">
-          ${msg.content}
+        <div class="card-msg p-4 bg-[#12131a] border border-[rgba(255,255,255,0.08)] rounded-xl text-xs text-white leading-relaxed animate-fadeIn">
+          ${this.renderRichMarkdown(msg.content)}
         </div>
       `;
     }).join('') + (this.isStreamingCode ? `
-      <div id="activeCodeStreamCard" class="w-full p-4 sm:p-5 bg-[#131314] border border-[#8ab4f8]/40 rounded-2xl shadow-2xl space-y-3 animate-fadeIn font-mono my-3">
+      <div id="activeCodeStreamCard" class="w-full p-4 sm:p-5 bg-[#0e0f14] border border-[#8ab4f8]/40 rounded-2xl shadow-2xl space-y-3 animate-fadeIn font-mono my-3">
         <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-2.5">
           <div class="flex items-center gap-2.5">
             <span class="w-2.5 h-2.5 rounded-full bg-[#8ab4f8] animate-ping"></span>
             <span class="text-xs font-bold text-white uppercase">Writing: ${this.streamingFileName}</span>
-            <span class="text-[10px] bg-[#1e1f20] text-[#8ab4f8] px-2.5 py-0.5 rounded-full border border-[rgba(255,255,255,0.08)] font-mono" id="streamLineCountBadge">
+            <span class="text-[10px] bg-[#181920] text-[#8ab4f8] px-2.5 py-0.5 rounded-full border border-[rgba(255,255,255,0.08)] font-mono" id="streamLineCountBadge">
               Line ${this.streamingLineNum} of ${this.totalStreamingLines}
             </span>
           </div>
           <span class="text-[10px] text-[#81c995] font-bold tracking-wider animate-pulse font-mono">LIVE GENERATING LINE-BY-LINE...</span>
         </div>
-        <div class="max-h-72 overflow-y-auto custom-scrollbar p-3.5 bg-[#0e0e0f] rounded-xl border border-[rgba(255,255,255,0.06)] text-xs text-[#81c995] leading-relaxed select-text" id="streamCodeScrollBox">
+        <div class="max-h-72 overflow-y-auto custom-scrollbar p-3.5 bg-[#08080a] rounded-xl border border-[rgba(255,255,255,0.06)] text-xs text-[#81c995] leading-relaxed select-text" id="streamCodeScrollBox">
           <pre class="font-mono text-xs text-[#e3e3e3] whitespace-pre-wrap"><code id="streamCodeElement">${this.escapeHtml(this.displayedStreamingCode)}</code></pre>
         </div>
       </div>
     ` : '') + (this.isExecuting && this.aiMode === 'ask' ? `
-      <div class="thinking-card p-5 bg-[#131314] border border-[rgba(255,255,255,0.08)] rounded-2xl shadow-xl space-y-3 animate-fadeIn flex items-start gap-3.5">
-        <div class="w-8 h-8 rounded-full bg-[#1e1f20] border border-[#8ab4f8]/30 flex items-center justify-center flex-shrink-0">
+      <div class="thinking-card p-5 bg-[#12131a] border border-[rgba(255,255,255,0.08)] rounded-2xl shadow-xl space-y-3 animate-fadeIn flex items-start gap-3.5">
+        <div class="w-8 h-8 rounded-xl bg-[#181920] border border-[#8ab4f8]/30 flex items-center justify-center flex-shrink-0 shadow-md">
           <span class="w-2.5 h-2.5 rounded-full bg-[#8ab4f8] animate-ping"></span>
         </div>
         <div class="flex-1 space-y-2">
           <div class="flex items-center gap-2">
-            <span class="font-semibold text-white text-xs">Model is thinking...</span>
+            <span class="font-semibold text-white text-xs">Model is synthesizing answer...</span>
             <span class="inline-flex items-center gap-1 ml-1">
               <span class="thinking-dot thinking-dot-1"></span>
               <span class="thinking-dot thinking-dot-2"></span>
@@ -1782,7 +1935,7 @@ export class WorkspaceComponent {
         </div>
       </div>
     ` : (this.isExecuting && this.aiMode === 'agent' && !this.isStreamingCode ? `
-      <div class="p-4 bg-[#131314] border border-[#8ab4f8]/30 rounded-xl flex items-center justify-between text-xs font-mono text-[#ededed] shadow-lg animate-fadeIn">
+      <div class="p-4 bg-[#12131a] border border-[#8ab4f8]/30 rounded-xl flex items-center justify-between text-xs font-mono text-[#ededed] shadow-lg animate-fadeIn">
         <div class="flex items-center gap-2.5">
           <span class="w-2.5 h-2.5 rounded-full bg-[#8ab4f8] animate-ping"></span>
           <span class="text-[#8ab4f8] font-bold">AUTONOMOUS SYNTHESIS:</span>
@@ -1801,28 +1954,56 @@ export class WorkspaceComponent {
     if (!md) return '';
     let html = this.escapeHtml(md);
 
+    // Callout Alert Blocks (> [!NOTE], > [!TIP], > [!IMPORTANT], > [!WARNING], > [!CAUTION])
+    const calloutRegex = /^&gt; \s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*\n((?:&gt; .*\n?)+)/gim;
+    html = html.replace(calloutRegex, (_match, type, content) => {
+      const cleanContent = content.replace(/^&gt; ?/gm, '').trim();
+      const lowerType = type.toLowerCase();
+      let icon = 'ℹ️';
+      if (lowerType === 'tip') icon = '💡';
+      if (lowerType === 'important') icon = '⭐';
+      if (lowerType === 'warning') icon = '⚠️';
+      if (lowerType === 'caution') icon = '🛑';
+      return `
+        <div class="callout-box callout-${lowerType}">
+          <span class="text-base flex-shrink-0">${icon}</span>
+          <div class="space-y-1">
+            <div class="font-bold uppercase tracking-wider text-[10px]">${type}</div>
+            <div>${cleanContent}</div>
+          </div>
+        </div>
+      `;
+    });
+
     // Code blocks with syntax badge & copy button
     html = html.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (_match, lang, code) => {
       const language = lang.trim() || 'code';
       const cleanCode = code.trim();
       return `
-        <div class="my-3 rounded-xl border border-[#27272a] bg-[#000000] overflow-hidden shadow-lg">
-          <div class="h-7 px-3 bg-[#111113] border-b border-[#27272a] flex items-center justify-between text-[10px] font-mono text-[#a1a1aa]">
-            <span class="text-[#00ff88] uppercase font-bold">${language}</span>
-            <button class="btn-copy-code hover:text-white transition cursor-pointer" data-code="${this.escapeHtml(cleanCode)}">Copy</button>
+        <div class="code-block-wrapper">
+          <div class="code-block-header">
+            <div class="code-lang-pill">
+              <span class="code-lang-dot"></span>
+              <span>${language}</span>
+            </div>
+            <button class="btn-copy-code" data-code="${this.escapeHtml(cleanCode)}" title="Copy code snippet">
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copy</span>
+            </button>
           </div>
-          <pre class="p-3 text-xs text-[#ededed] font-mono overflow-x-auto custom-scrollbar leading-relaxed"><code>${cleanCode}</code></pre>
+          <pre class="code-block-body custom-scrollbar"><code>${cleanCode}</code></pre>
         </div>
       `;
     });
 
     // Inline code
-    html = html.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-[#18181b] text-[#00ff88] font-mono text-[11px] border border-[#27272a]">$1</code>');
+    html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
 
     // Headings
-    html = html.replace(/^#### (.*$)/gim, '<h4 class="text-xs font-bold text-white mt-3 mb-1.5 flex items-center gap-1.5 font-mono"><span class="w-1.5 h-1.5 rounded-full bg-[#00ff88]"></span>$1</h4>');
-    html = html.replace(/^### (.*$)/gim, '<h3 class="text-sm font-extrabold text-white mt-4 mb-2 border-b border-[#27272a] pb-1 font-mono text-[#00ff88]">$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2 class="text-base font-extrabold text-white mt-4 mb-2 font-mono">$1</h2>');
+    html = html.replace(/^#### (.*$)/gim, '<h4 class="text-xs font-bold text-white mt-4 mb-2 flex items-center gap-1.5 font-mono"><span class="w-1.5 h-1.5 rounded-full bg-[#8ab4f8]"></span>$1</h4>');
+    html = html.replace(/^### (.*$)/gim, '<h3 class="text-sm font-extrabold text-white mt-5 mb-2.5 border-b border-[rgba(255,255,255,0.08)] pb-1.5 font-heading text-[#8ab4f8]">$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2 class="text-base font-extrabold text-white mt-6 mb-3 font-heading tracking-tight">$1</h2>');
+    html = html.replace(/^# (.*$)/gim, '<h1 class="text-lg font-black text-white mt-6 mb-3 font-heading tracking-tight">$1</h1>');
 
     // Tables
     const tableRegex = /((?:\|[^\n]+\|\r?\n)+)/g;
@@ -1830,23 +2011,23 @@ export class WorkspaceComponent {
       const rows = match.trim().split(/\r?\n/).map(r => r.trim()).filter(r => r.length > 0);
       if (rows.length < 2) return match;
       
-      let tableHtml = '<div class="overflow-x-auto my-3 rounded-xl border border-[#27272a] shadow-md"><table class="w-full text-xs text-left font-mono border-collapse bg-[#09090b]">';
+      let tableHtml = '<div class="md-table-wrapper"><table class="md-table">';
       
       // Header row
       const headers = rows[0].split('|').map(c => c.trim()).filter((_c, i, a) => i > 0 && i < a.length - 1);
-      tableHtml += '<thead><tr class="bg-[#111113] border-b border-[#27272a] text-[#00ff88] font-bold text-[11px]">';
+      tableHtml += '<thead><tr>';
       headers.forEach(h => {
-        tableHtml += `<th class="p-2.5 border-r border-[#27272a] last:border-r-0">${h}</th>`;
+        tableHtml += `<th>${h}</th>`;
       });
       tableHtml += '</tr></thead><tbody>';
 
-      // Body rows (skip separator row at index 1 if it has dashes)
+      // Body rows (skip separator row if contains dashes)
       const startIndex = rows[1] && rows[1].includes('---') ? 2 : 1;
       for (let i = startIndex; i < rows.length; i++) {
         const cols = rows[i].split('|').map(c => c.trim()).filter((_c, idx, a) => idx > 0 && idx < a.length - 1);
-        tableHtml += '<tr class="border-b border-[#27272a]/50 hover:bg-[#18181b]/50 transition">';
+        tableHtml += '<tr>';
         cols.forEach(c => {
-          tableHtml += `<td class="p-2.5 border-r border-[#27272a]/50 last:border-r-0 text-[#ededed]">${c}</td>`;
+          tableHtml += `<td>${c}</td>`;
         });
         tableHtml += '</tr>';
       }
@@ -1859,11 +2040,21 @@ export class WorkspaceComponent {
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
     html = html.replace(/\*([^*]+)\*/g, '<em class="text-[#a1a1aa] italic">$1</em>');
 
+    // Checklist items: [x] or [ ]
+    html = html.replace(/^[•*-] \[x\] (.*$)/gim, '<div class="flex items-start gap-2 my-1 text-xs text-[#81c995]"><span class="w-4 h-4 rounded bg-[#81c995]/20 border border-[#81c995] flex items-center justify-center text-[10px] font-bold mt-0.5">✓</span><span class="flex-1">$1</span></div>');
+    html = html.replace(/^[•*-] \[ \] (.*$)/gim, '<div class="flex items-start gap-2 my-1 text-xs text-[#a1a1aa]"><span class="w-4 h-4 rounded bg-[#181920] border border-[rgba(255,255,255,0.2)] flex items-center justify-center text-[10px] mt-0.5">○</span><span class="flex-1">$1</span></div>');
+
     // Bullet lists
-    html = html.replace(/^[•*-] (.*$)/gim, '<div class="flex items-start gap-2 my-1 text-xs text-[#ededed]"><span class="text-[#00ff88] mt-0.5">•</span><span class="flex-1">$1</span></div>');
+    html = html.replace(/^[•*-] (.*$)/gim, '<div class="flex items-start gap-2 my-1.5 text-xs text-[#e3e3e3]"><span class="text-[#8ab4f8] mt-0.5 font-bold">•</span><span class="flex-1">$1</span></div>');
+
+    // Numbered lists: 1. 2. 3.
+    html = html.replace(/^(\d+)\. (.*$)/gim, '<div class="flex items-start gap-2 my-1.5 text-xs text-[#e3e3e3]"><span class="w-4 h-4 rounded-full bg-[#181920] border border-[rgba(255,255,255,0.12)] text-[#8ab4f8] flex items-center justify-center text-[10px] font-mono font-bold mt-0.5 flex-shrink-0">$1</span><span class="flex-1">$2</span></div>');
+
+    // Blockquotes
+    html = html.replace(/^&gt; (.*$)/gim, '<blockquote class="border-l-2 border-[#8ab4f8] pl-3 py-1 my-2 text-xs italic text-[#c4c7c5] bg-[#8ab4f8]/5 rounded-r-lg">$1</blockquote>');
 
     // Horizontal Rule
-    html = html.replace(/^---$/gim, '<hr class="my-3 border-[#27272a]"/>');
+    html = html.replace(/^---$/gim, '<hr class="my-4 border-[rgba(255,255,255,0.08)]"/>');
 
     return html;
   }
@@ -2335,9 +2526,65 @@ export class WorkspaceComponent {
           const span = (e.currentTarget as HTMLElement).querySelector('span');
           if (span) {
             span.textContent = 'Copied!';
-            setTimeout(() => { span.textContent = 'Copy'; }, 1500);
+            setTimeout(() => { span.textContent = 'Copy Response'; }, 1800);
           }
         }
+      });
+    });
+
+    // Copy Code Snippet buttons
+    document.querySelectorAll('.btn-copy-code').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const targetBtn = e.currentTarget as HTMLElement;
+        const code = targetBtn.dataset['code'] || '';
+        if (code) {
+          navigator.clipboard.writeText(code);
+          targetBtn.classList.add('copied');
+          const span = targetBtn.querySelector('span');
+          if (span) span.textContent = 'Copied!';
+          setTimeout(() => {
+            targetBtn.classList.remove('copied');
+            if (span) span.textContent = 'Copy';
+          }, 1800);
+        }
+      });
+    });
+
+    // Quick Suggestion Starter Prompts
+    document.querySelectorAll('.btn-quick-prompt').forEach(card => {
+      card.addEventListener('click', (e) => {
+        const promptText = (e.currentTarget as HTMLElement).dataset['prompt'] || '';
+        if (promptText) {
+          this.taskPrompt = promptText;
+          const inputEl = document.getElementById('taskInput') as HTMLTextAreaElement;
+          if (inputEl) {
+            inputEl.value = promptText;
+            inputEl.focus();
+          }
+        }
+      });
+    });
+
+    // Thought Reasoning Process Collapse / Expand
+    document.querySelectorAll('.btn-thought-toggle').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = (e.currentTarget as HTMLElement).dataset['id'];
+        const msg = this.messages.find(m => m.id === id);
+        if (msg) {
+          msg.collapsed = !(msg.collapsed ?? false);
+          this.render();
+        }
+      });
+    });
+
+    // Response Feedback thumbs
+    document.querySelectorAll('.btn-feedback-thumb').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const el = e.currentTarget as HTMLElement;
+        el.classList.add('scale-125', 'text-[#81c995]');
+        setTimeout(() => {
+          el.classList.remove('scale-125');
+        }, 300);
       });
     });
 

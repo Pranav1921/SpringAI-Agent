@@ -1,17 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-black: #0e0e0f;
-  --bg-subtle: #131314;
-  --bg-card: #1e1f20;
-  --bg-hover: #282a2c;
-  --border-muted: rgba(255, 255, 255, 0.1);
+  --bg-black: #090a0f;
+  --bg-subtle: #111218;
+  --bg-card: #181920;
+  --bg-hover: #22242e;
+  --border-muted: rgba(255, 255, 255, 0.08);
   --border-active: rgba(138, 180, 248, 0.4);
-  --text-primary: #e3e3e3;
+  --text-primary: #f0f2f5;
   --text-secondary: #c4c7c5;
   --text-muted: #8e918f;
   --google-blue: #8ab4f8;
@@ -22,8 +22,8 @@
 }
 
 body {
-  background-color: #0e0e0f;
-  color: #e3e3e3;
+  background-color: #090a0f;
+  color: #f0f2f5;
   font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -46,8 +46,8 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #282a2c;
-  border-radius: 3px;
+  background: #27272a;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -56,13 +56,13 @@ body {
 
 /* Smooth Fade & Micro-Interactions */
 .fade-in, .animate-fadeIn {
-  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -88,68 +88,12 @@ body {
   background: rgba(255, 255, 255, 0.25);
 }
 
-/* Minimal Dotted Thinking Loader Animation */
-@keyframes bounceDot {
-  0%, 80%, 100% {
-    transform: translateY(0) scale(0.7);
-    opacity: 0.35;
-  }
-  40% {
-    transform: translateY(-4px) scale(1.15);
-    opacity: 1;
-    background-color: #8ab4f8;
-    box-shadow: 0 0 8px #8ab4f8;
-  }
-}
-
-.thinking-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #8ab4f8;
-  animation: bounceDot 1.2s infinite ease-in-out both;
-}
-
-.thinking-dot-1 {
-  animation-delay: -0.32s;
-}
-
-.thinking-dot-2 {
-  animation-delay: -0.16s;
-}
-
-.thinking-dot-3 {
-  animation-delay: 0s;
-}
-
-/* Premium Thinking Card & Shimmer */
-@keyframes shimmerWave {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.thinking-card {
-  animation: fadeIn 0.25s ease-out forwards;
-}
-
-.shimmer-line {
-  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(138, 180, 248, 0.2) 50%, rgba(255,255,255,0.04) 75%);
-  background-size: 200% 100%;
-  animation: shimmerWave 2s infinite linear;
-  border-radius: 6px;
-}
-
 /* Resizer handle visual */
 .resizer-handle {
-  width: 5px;
+  width: 4px;
   cursor: col-resize;
-  background-color: #282a2c;
-  transition: background-color 0.2s, width 0.1s;
+  background-color: rgba(255, 255, 255, 0.08);
+  transition: background-color 0.2s, box-shadow 0.2s, width 0.1s;
   z-index: 30;
   flex-shrink: 0;
 }
@@ -157,18 +101,7 @@ body {
 .resizer-handle:hover, .resizer-handle:active {
   background-color: #8ab4f8;
   box-shadow: 0 0 10px rgba(138, 180, 248, 0.6);
-  width: 6px;
-}
-
-/* Google AI Studio Specific Classes */
-.gemini-gradient-text {
-  background: linear-gradient(135deg, #8ab4f8 0%, #c58af9 50%, #f28b82 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.gemini-gradient-bg {
-  background: linear-gradient(135deg, #1a73e8 0%, #7b1fa2 100%);
+  width: 5px;
 }
 
 .gemini-pill {
