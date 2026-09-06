@@ -1056,7 +1056,7 @@ The **Taj Mahal** is located in **Agra, Uttar Pradesh, India**, situated on the 
 
         // 7. Prompt user with clear interactive options if remote credentials are needed
         broadcastEvent(new AgentEvent("DECISION", "AGENT", 
-            "Workspace committed locally on branch 'main' (" + sanitizedCommitMsg + "). To push to GitHub, authenticate or provide your remote repository URL (e.g., https://github.com/username/" + explicitRepoName + ".git):",
+            "Workspace committed locally on branch 'main' (" + safeCommitMsg + "). To push to GitHub, authenticate or provide your remote repository URL (e.g., https://github.com/username/" + explicitRepoName + ".git):",
             Map.of("options", List.of(
                 Map.of("id", "create_gh", "label", "Create & Push with GitHub CLI (gh auth login)", "action", "gh_auth"),
                 Map.of("id", "keep_local", "label", "Keep Local Commit", "action", "keep_local")
