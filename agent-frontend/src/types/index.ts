@@ -92,6 +92,7 @@ export interface UserProfile {
   login: string;
   name?: string;
   avatar_url?: string;
+  html_url?: string;
   organization?: string;
   authenticated?: boolean;
 }

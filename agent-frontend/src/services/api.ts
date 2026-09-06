@@ -1,11 +1,13 @@
 import { UserProfile, TaskPayload, TaskResponse, AgentEvent, FileNode, SkillItem, AgentPersona, CheckpointItem } from '../types';
 
 export class ApiService {
-  private baseUrl = 'http://localhost:8080/api';
+  private baseUrl = '/api';
 
   private getHeaders(): HeadersInit {
-    const tenant = localStorage.getItem('agent_tenant') || 'pranav1921';
+    const tenant = localStorage.getItem('agent_tenant') || 'default';
     const token = localStorage.getItem('github_token') || '';
+    const geminiKey = localStorage.getItem('gemini_api_key') || '';
+    const model = localStorage.getItem('agent_model') || 'gemini-1.5-flash';
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-Tenant-Id': tenant
@@ -13,35 +15,57 @@ export class ApiService {
     if (token) {
       headers['X-GitHub-Token'] = token;
     }
+    if (geminiKey) {
+      headers['X-Gemini-Api-Key'] = geminiKey;
+    }
+    if (model) {
+      headers['X-Model-Id'] = model;
+    }
     return headers;
+  }
+
+  private async apiFetch(endpoint: string, init: RequestInit = {}): Promise<Response> {
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const headers = {
+      ...this.getHeaders(),
+      ...(init.headers || {})
+    };
+
+    try {
+      return await fetch(`${this.baseUrl}${cleanEndpoint}`, {
+        ...init,
+        headers
+      });
+    } catch (localErr) {
+      console.warn(`Local proxy fetch to ${this.baseUrl}${cleanEndpoint} failed, retrying directly on http://127.0.0.1:8080/api${cleanEndpoint}...`);
+      return await fetch(`http://127.0.0.1:8080/api${cleanEndpoint}`, {
+        ...init,
+        headers
+      });
+    }
   }
 
   async getUserProfile(): Promise<UserProfile> {
     try {
-      const res = await fetch(`${this.baseUrl}/user`, {
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
+      const res = await this.apiFetch('/user');
       if (!res.ok) throw new Error();
       return await res.json();
     } catch {
       return {
-        login: 'Pranav1921',
-        name: 'Pranav1921',
+        login: 'Guest',
+        name: 'Guest User',
         avatar_url: 'https://avatars.githubusercontent.com/u/9919?v=4',
-        organization: 'Workspace • Pranav1921',
-        authenticated: true
+        organization: 'Local Workspace',
+        authenticated: false
       };
     }
   }
 
   async loginUser(username: string, token?: string): Promise<UserProfile> {
     try {
-      const res = await fetch(`${this.baseUrl}/user/login`, {
+      const res = await this.apiFetch('/user/login', {
         method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ username, token }),
-        credentials: 'include'
+        body: JSON.stringify({ username, token })
       });
       const data = await res.json();
       if (data && data.login) {
@@ -52,7 +76,7 @@ export class ApiService {
       }
       return data;
     } catch {
-      const cleanUser = username || 'Pranav1921';
+      const cleanUser = username || 'Developer';
       return {
         login: cleanUser,
         name: cleanUser,
@@ -65,32 +89,32 @@ export class ApiService {
 
   async logoutUser(): Promise<void> {
     try {
-      await fetch(`${this.baseUrl}/user/logout`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
+      await this.apiFetch('/user/logout', { method: 'POST' });
     } catch {}
     localStorage.removeItem('agent_tenant');
     localStorage.removeItem('github_token');
   }
 
   async runTask(payload: TaskPayload): Promise<TaskResponse> {
-    const res = await fetch(`${this.baseUrl}/task`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(payload),
-      credentials: 'include'
-    });
-    return await res.json();
+    try {
+      const res = await this.apiFetch('/task', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Server returned ${res.status}: ${text}`);
+      }
+      return await res.json();
+    } catch (e) {
+      console.error('API runTask failed:', e);
+      throw e;
+    }
   }
 
   async getAgentHistory(): Promise<AgentEvent[]> {
     try {
-      const res = await fetch(`${this.baseUrl}/agent/history`, {
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
+      const res = await this.apiFetch('/agent/history');
       return await res.json();
     } catch {
       return [];
@@ -98,32 +122,22 @@ export class ApiService {
   }
 
   async clearAgentMemory(): Promise<{ status: string }> {
-    const res = await fetch(`${this.baseUrl}/agent/clear`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      credentials: 'include'
-    });
+    const res = await this.apiFetch('/agent/clear', { method: 'POST' });
     return await res.json();
   }
 
   async getCurrentFolder(): Promise<{ folderPath: string; tenant: string }> {
     try {
-      const res = await fetch(`${this.baseUrl}/workspace/current-folder`, {
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
+      const res = await this.apiFetch('/workspace/current-folder');
       return await res.json();
     } catch {
-      return { folderPath: 'workspace', tenant: 'pranav1921' };
+      return { folderPath: 'workspace', tenant: 'default' };
     }
   }
 
   async getCommonFolders(): Promise<Record<string, string>> {
     try {
-      const res = await fetch(`${this.baseUrl}/workspace/common-folders`, {
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
+      const res = await this.apiFetch('/workspace/common-folders');
       return await res.json();
     } catch {
       return {
@@ -136,44 +150,42 @@ export class ApiService {
   }
 
   async setFolder(folderPath: string): Promise<{ status: string; currentFolder: string }> {
-    const res = await fetch(`${this.baseUrl}/workspace/set-folder`, {
+    const res = await this.apiFetch('/workspace/set-folder', {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ folderPath }),
-      credentials: 'include'
+      body: JSON.stringify({ folderPath })
     });
     return await res.json();
   }
 
   async openFolderInOs(): Promise<{ status: string; message: string }> {
     try {
-      const res = await fetch(`${this.baseUrl}/workspace/open-in-os`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
+      const res = await this.apiFetch('/workspace/open-in-os', { method: 'POST' });
       return await res.json();
     } catch (e: any) {
       return { status: 'ERROR', message: e.message || 'Failed to open in OS' };
     }
   }
 
+  async pickFolderDialog(): Promise<{ status: string; folderPath: string; files: FileNode[] }> {
+    try {
+      const res = await this.apiFetch('/workspace/pick-folder-dialog', { method: 'POST' });
+      return await res.json();
+    } catch {
+      return { status: 'ERROR', folderPath: 'workspace', files: [] };
+    }
+  }
+
   async executeTerminalCommand(command: string): Promise<{ status: string; command: string; output: string }> {
-    const res = await fetch(`${this.baseUrl}/terminal/exec`, {
+    const res = await this.apiFetch('/terminal/exec', {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ command }),
-      credentials: 'include'
+      body: JSON.stringify({ command })
     });
     return await res.json();
   }
 
   async getFiles(): Promise<FileNode[]> {
     try {
-      const res = await fetch(`${this.baseUrl}/workspace/files`, {
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
+      const res = await this.apiFetch('/workspace/files');
       return await res.json();
     } catch {
       return [];
@@ -182,10 +194,7 @@ export class ApiService {
 
   async getFileContent(path: string): Promise<{ content: string }> {
     try {
-      const res = await fetch(`${this.baseUrl}/workspace/file-content?path=${encodeURIComponent(path)}`, {
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
+      const res = await this.apiFetch(`/workspace/file-content?path=${encodeURIComponent(path)}`);
       return await res.json();
     } catch {
       return { content: '' };
@@ -193,31 +202,24 @@ export class ApiService {
   }
 
   async saveFile(path: string, content: string): Promise<{ status: string }> {
-    const res = await fetch(`${this.baseUrl}/workspace/save`, {
+    const res = await this.apiFetch('/workspace/save', {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ path, content }),
-      credentials: 'include'
+      body: JSON.stringify({ path, content })
     });
     return await res.json();
   }
 
   async deleteFile(path: string): Promise<{ status: string }> {
-    const res = await fetch(`${this.baseUrl}/workspace/delete`, {
+    const res = await this.apiFetch('/workspace/delete', {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ path }),
-      credentials: 'include'
+      body: JSON.stringify({ path })
     });
     return await res.json();
   }
 
   async getCheckpoints(): Promise<CheckpointItem[]> {
     try {
-      const res = await fetch(`${this.baseUrl}/checkpoints`, {
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
+      const res = await this.apiFetch('/checkpoints');
       return await res.json();
     } catch {
       return [];
@@ -225,21 +227,16 @@ export class ApiService {
   }
 
   async restoreCheckpoint(hash: string): Promise<{ status: string }> {
-    const res = await fetch(`${this.baseUrl}/checkpoints/restore`, {
+    const res = await this.apiFetch('/checkpoints/restore', {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ hash }),
-      credentials: 'include'
+      body: JSON.stringify({ hash })
     });
     return await res.json();
   }
 
   async getSkills(): Promise<SkillItem[]> {
     try {
-      const res = await fetch(`${this.baseUrl}/skills`, {
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
+      const res = await this.apiFetch('/skills');
       return await res.json();
     } catch {
       return [];
@@ -247,30 +244,20 @@ export class ApiService {
   }
 
   async toggleSkill(id: string): Promise<{ status: string }> {
-    const res = await fetch(`${this.baseUrl}/skills/${id}/toggle`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      credentials: 'include'
-    });
+    const res = await this.apiFetch(`/skills/${id}/toggle`, { method: 'POST' });
     return await res.json();
   }
 
   async clearMemory(): Promise<{ status: string }> {
-    const res = await fetch(`${this.baseUrl}/agent/clear`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      credentials: 'include'
-    });
+    const res = await this.apiFetch('/agent/clear', { method: 'POST' });
     return await res.json();
   }
 
   async createRepoAndPush(payload: { name: string; description?: string; isPrivate?: boolean; token?: string; username?: string }): Promise<any> {
     try {
-      const res = await fetch(`${this.baseUrl}/git/create-and-push`, {
+      const res = await this.apiFetch('/git/create-and-push', {
         method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify(payload),
-        credentials: 'include'
+        body: JSON.stringify(payload)
       });
       if (!res.ok) {
         const errText = await res.text();
@@ -289,10 +276,7 @@ export class ApiService {
 
   async getPersonas(): Promise<AgentPersona[]> {
     try {
-      const res = await fetch(`${this.baseUrl}/personas`, {
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
+      const res = await this.apiFetch('/personas');
       return await res.json();
     } catch {
       return [];
@@ -300,22 +284,22 @@ export class ApiService {
   }
 
   async stopTask(): Promise<{ status: string }> {
-    const res = await fetch(`${this.baseUrl}/agent/stop`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      credentials: 'include'
-    });
-    return await res.json();
+    try {
+      const res = await this.apiFetch('/agent/stop', { method: 'POST' });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Backend stop notification failed:', e);
+    }
+    return { status: 'TASK_STOPPED' };
   }
 
   // --- Google AI Studio APIs ---
 
   async getStudioModels(): Promise<any[]> {
     try {
-      const res = await fetch(`${this.baseUrl}/studio/models`, {
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
+      const res = await this.apiFetch('/studio/models');
       return await res.json();
     } catch {
       return [
@@ -328,11 +312,9 @@ export class ApiService {
 
   async getStudioCode(params: TaskPayload): Promise<{ curl: string; python: string; typescript: string; java: string }> {
     try {
-      const res = await fetch(`${this.baseUrl}/studio/get-code`, {
+      const res = await this.apiFetch('/studio/get-code', {
         method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify(params),
-        credentials: 'include'
+        body: JSON.stringify(params)
       });
       return await res.json();
     } catch {
@@ -347,10 +329,7 @@ export class ApiService {
 
   async getSavedStudioPrompts(): Promise<any[]> {
     try {
-      const res = await fetch(`${this.baseUrl}/studio/prompts`, {
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
+      const res = await this.apiFetch('/studio/prompts');
       return await res.json();
     } catch {
       return [
@@ -359,17 +338,109 @@ export class ApiService {
     }
   }
 
-  async saveStudioPrompt(data: any): Promise<any> {
+  async getLandingInfo(): Promise<any> {
     try {
-      const res = await fetch(`${this.baseUrl}/studio/prompts`, {
+      const res = await this.apiFetch('/landing/info');
+      return await res.json();
+    } catch {
+      return {
+        title: 'Spring AI Autonomous Dev',
+        version: '2.0.0',
+        status: 'ONLINE'
+      };
+    }
+  }
+
+  async getWorkspaceInfo(): Promise<any> {
+    try {
+      const res = await this.apiFetch('/workspace/info');
+      return await res.json();
+    } catch {
+      return {
+        workspacePath: 'workspace',
+        status: 'READY'
+      };
+    }
+  }
+
+  async triggerPipeline(repo?: string, branch?: string, commit?: string): Promise<any> {
+    try {
+      const res = await this.apiFetch('/pipeline/trigger', {
         method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify(data),
-        credentials: 'include'
+        body: JSON.stringify({
+          repo: repo || 'enterprise-app',
+          branch: branch || 'main',
+          commit: commit || `commit-${Date.now().toString(36)}`,
+          triggerType: 'MANUAL_UI'
+        })
       });
       return await res.json();
     } catch {
-      return data;
+      return { status: 'QUEUED', message: 'Local worker triggered' };
+    }
+  }
+
+  async getPipelineHistory(): Promise<any[]> {
+    try {
+      const res = await this.apiFetch('/pipeline/history');
+      return await res.json();
+    } catch {
+      return [];
+    }
+  }
+
+  async getPipelineDetails(id: string): Promise<any> {
+    try {
+      const res = await this.apiFetch(`/pipeline/${id}`);
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }
+
+  async getWorkflowTemplates(): Promise<any[]> {
+    try {
+      const res = await this.apiFetch('/workflow/templates');
+      return await res.json();
+    } catch {
+      return [];
+    }
+  }
+
+  async executeWorkflow(templateId?: string, input?: any, definition?: any): Promise<any> {
+    try {
+      const body: any = {
+        templateId: templateId || 'tpl-pr-governance',
+        input: input || { triggerSource: 'MANUAL_CANVAS_RUN' }
+      };
+      if (definition) {
+        body.definition = definition;
+      }
+      const res = await this.apiFetch('/workflow/execute', {
+        method: 'POST',
+        body: JSON.stringify(body)
+      });
+      return await res.json();
+    } catch {
+      return { status: 'QUEUED', id: 'wf-mock-run' };
+    }
+  }
+
+  async getWorkflowHistory(): Promise<any[]> {
+    try {
+      const res = await this.apiFetch('/workflow/history');
+      return await res.json();
+    } catch {
+      return [];
+    }
+  }
+
+  async getWorkflowDetails(id: string): Promise<any> {
+    try {
+      const res = await this.apiFetch(`/workflow/${id}`);
+      return await res.json();
+    } catch {
+      return null;
     }
   }
 }

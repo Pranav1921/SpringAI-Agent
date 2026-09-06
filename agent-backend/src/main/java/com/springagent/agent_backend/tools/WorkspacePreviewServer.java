@@ -27,16 +27,15 @@ public class WorkspacePreviewServer {
 
     @PostConstruct
     public void start() {
-        try {
-            startServer(3000);
-        } catch (Exception e) {
-            System.err.println("Preview server could not bind port 3000 (" + e.getMessage() + "). Trying port 3001...");
+        for (int p = 3000; p <= 3010; p++) {
             try {
-                startServer(3001);
-            } catch (Exception ex) {
-                System.err.println("Failed to start preview server on fallback port: " + ex.getMessage());
+                startServer(p);
+                return;
+            } catch (Exception e) {
+                // Try next port
             }
         }
+        System.out.println("[*] WorkspacePreviewServer: Local standalone preview port 3000-3010 in use; embedded srcdoc preview active.");
     }
 
     private void startServer(int targetPort) throws IOException {
@@ -84,7 +83,47 @@ public class WorkspacePreviewServer {
             Path workspaceRoot = fileSystemTool.getWorkspaceRoot();
             Path filePath = workspaceRoot.resolve(rawPath).normalize();
 
+            // Try resolving exact path or common aliases
+            if (!Files.exists(filePath) || Files.isDirectory(filePath)) {
+                String fileName = rawPath.toLowerCase();
+                if (fileName.equals("style.css") || fileName.equals("styles.css")) {
+                    Path alt1 = workspaceRoot.resolve("styles.css");
+                    Path alt2 = workspaceRoot.resolve("style.css");
+                    if (Files.exists(alt1)) filePath = alt1;
+                    else if (Files.exists(alt2)) filePath = alt2;
+                } else if (fileName.equals("script.js") || fileName.equals("app.js") || fileName.equals("main.js")) {
+                    Path alt1 = workspaceRoot.resolve("script.js");
+                    Path alt2 = workspaceRoot.resolve("app.js");
+                    Path alt3 = workspaceRoot.resolve("main.js");
+                    if (Files.exists(alt1)) filePath = alt1;
+                    else if (Files.exists(alt2)) filePath = alt2;
+                    else if (Files.exists(alt3)) filePath = alt3;
+                }
+            }
+
             if (!filePath.startsWith(workspaceRoot) || !Files.exists(filePath) || Files.isDirectory(filePath)) {
+                // Only fall back to index.html for SPA page navigations, NOT for missing CSS/JS assets
+                boolean isAssetRequest = rawPath.endsWith(".css") || rawPath.endsWith(".js") || rawPath.endsWith(".png") || rawPath.endsWith(".jpg") || rawPath.endsWith(".ico") || rawPath.endsWith(".svg") || rawPath.endsWith(".json");
+                if (isAssetRequest) {
+                    if (rawPath.endsWith(".css")) {
+                        byte[] emptyCss = "/* stylesheet placeholder */\n".getBytes("UTF-8");
+                        exchange.getResponseHeaders().set("Content-Type", "text/css; charset=UTF-8");
+                        exchange.sendResponseHeaders(200, emptyCss.length);
+                        try (OutputStream os = exchange.getResponseBody()) { os.write(emptyCss); }
+                        return;
+                    } else if (rawPath.endsWith(".js")) {
+                        byte[] emptyJs = "// javascript placeholder\n".getBytes("UTF-8");
+                        exchange.getResponseHeaders().set("Content-Type", "application/javascript; charset=UTF-8");
+                        exchange.sendResponseHeaders(200, emptyJs.length);
+                        try (OutputStream os = exchange.getResponseBody()) { os.write(emptyJs); }
+                        return;
+                    } else {
+                        exchange.sendResponseHeaders(404, -1);
+                        exchange.close();
+                        return;
+                    }
+                }
+
                 Path indexFallback = workspaceRoot.resolve("index.html");
                 if (Files.exists(indexFallback)) {
                     filePath = indexFallback;

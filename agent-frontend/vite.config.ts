@@ -6,8 +6,19 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true
+        target: 'http://127.0.0.1:8090',
+        changeOrigin: true,
+        secure: false
+      },
+      '/oauth2': {
+        target: 'http://127.0.0.1:8090',
+        changeOrigin: true,
+        secure: false
+      },
+      '/login/oauth2': {
+        target: 'http://127.0.0.1:8090',
+        changeOrigin: true,
+        secure: false
       }
     }
   },

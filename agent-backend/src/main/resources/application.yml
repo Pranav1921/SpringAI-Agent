@@ -1,9 +1,17 @@
 server:
-  port: 8080
+  port: 8090
+  servlet:
+    session:
+      cookie:
+        same-site: lax
+        http-only: true
 
 spring:
   application:
     name: spring-ai-autonomous-dev
+  mvc:
+    async:
+      request-timeout: -1
   ai:
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
@@ -15,8 +23,8 @@ spring:
       client:
         registration:
           github:
-            client-id: ${GITHUB_CLIENT_ID:mock-client-id}
-            client-secret: ${GITHUB_CLIENT_SECRET:mock-client-secret}
+            client-id: ${GITHUB_CLIENT_ID:your_github_client_id}
+            client-secret: ${GITHUB_CLIENT_SECRET:your_github_client_secret}
             scope:
               - read:user
               - user:email
@@ -30,3 +38,7 @@ agent:
     memory: 1g
     cpus: 2.0
     preview-port: 3000
+
+gemini:
+  api-key: ${GEMINI_API_KEY:${GOOGLE_API_KEY:}}
+  model: ${GEMINI_MODEL:gemini-1.5-flash}

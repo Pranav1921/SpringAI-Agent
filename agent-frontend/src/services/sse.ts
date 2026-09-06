@@ -26,18 +26,31 @@ export class AgentSseService {
     return false;
   }
 
+  private reconnectTimer: any = null;
+  private reconnectDelay: number = 2000;
+  private useDirectBackend: boolean = false;
+
   public connect(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
     if (this.eventSource) {
       try {
         this.eventSource.close();
       } catch {}
+      this.eventSource = null;
     }
 
     try {
-      this.eventSource = new EventSource('http://localhost:8080/api/agent/events');
+      const sseUrl = this.useDirectBackend ? 'http://127.0.0.1:8080/api/agent/events' : '/api/agent/events';
+      this.eventSource = new EventSource(sseUrl);
 
       const handleEventData = (e: MessageEvent) => {
         try {
+          // Reset reconnect backoff on receiving messages
+          this.reconnectDelay = 3000;
           const data: AgentEvent = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
           if (!data.timestamp) {
             data.timestamp = new Date().toLocaleTimeString();
@@ -59,7 +72,12 @@ export class AgentSseService {
       eventTypes.forEach(t => this.eventSource?.addEventListener(t, handleEventData));
       this.eventSource.onmessage = handleEventData;
 
+      this.eventSource.onopen = () => {
+        this.reconnectDelay = 3000;
+      };
+
       this.eventSource.addEventListener('connected', () => {
+        this.reconnectDelay = 3000;
         this.notifyListeners({
           type: 'SYSTEM',
           source: 'SSE_STREAM',
@@ -69,11 +87,21 @@ export class AgentSseService {
       });
 
       this.eventSource.onerror = () => {
-        setTimeout(() => {
-          if (!this.eventSource || this.eventSource.readyState === EventSource.CLOSED) {
+        if (this.eventSource) {
+          try {
+            this.eventSource.close();
+          } catch {}
+          this.eventSource = null;
+        }
+        this.useDirectBackend = !this.useDirectBackend;
+        
+        if (!this.reconnectTimer) {
+          this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null;
+            this.reconnectDelay = Math.min(this.reconnectDelay * 1.5, 10000);
             this.connect();
-          }
-        }, 2000);
+          }, this.reconnectDelay);
+        }
       };
     } catch (e) {
       console.warn('SSE EventSource not supported or backend unreachable:', e);

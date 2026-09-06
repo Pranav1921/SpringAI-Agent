@@ -14,9 +14,12 @@ public class TerminalTool {
 
     private static final String CONTAINER_NAME = "agent-sandbox";
     private boolean dockerAvailable = false;
+    private final FileSystemTool fileSystemTool;
 
     @Autowired
-    private FileSystemTool fileSystemTool;
+    public TerminalTool(FileSystemTool fileSystemTool) {
+        this.fileSystemTool = fileSystemTool;
+    }
 
     @PostConstruct
     public void initDockerSandbox() {

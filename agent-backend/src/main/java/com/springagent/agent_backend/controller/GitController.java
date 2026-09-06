@@ -65,7 +65,10 @@ public class GitController {
         }
 
         // Fetch real public repositories by username
-        String targetUser = queryUsername != null && !queryUsername.isBlank() ? queryUsername.trim() : (tenantId != null && !tenantId.isBlank() ? tenantId.trim() : "Pranav1921");
+        String targetUser = queryUsername != null && !queryUsername.isBlank() ? queryUsername.trim() : (tenantId != null && !tenantId.isBlank() ? tenantId.trim() : "");
+        if (targetUser.isBlank() || targetUser.equalsIgnoreCase("guest") || targetUser.equalsIgnoreCase("default")) {
+            return Collections.emptyList();
+        }
         try {
             List<Map<String, Object>> repos = restClient.get()
                     .uri("/users/" + targetUser + "/repos?sort=updated&per_page=15")

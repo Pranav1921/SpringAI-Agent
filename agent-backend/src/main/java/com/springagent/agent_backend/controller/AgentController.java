@@ -40,7 +40,7 @@ public class AgentController {
     @GetMapping("/user")
     public Map<String, Object> getUserProfile(@AuthenticationPrincipal OAuth2User principal,
             @RequestHeader(value = "X-Tenant-Id", required = false) String tenantId) {
-        String tenantKey = (tenantId != null && !tenantId.isBlank()) ? tenantId.toLowerCase() : "pranav1921";
+        String tenantKey = (tenantId != null && !tenantId.isBlank()) ? tenantId.toLowerCase() : "guest";
 
         if (userSessions.containsKey(tenantKey)) {
             return userSessions.get(tenantKey);
@@ -62,6 +62,31 @@ public class AgentController {
             profile.put("authType", "GITHUB_OAUTH");
             userSessions.put(login.toLowerCase(), profile);
             return profile;
+        }
+
+        if (tenantKey.equals("localdev")) {
+            Map<String, Object> devProfile = new HashMap<>();
+            devProfile.put("login", "LocalDev");
+            devProfile.put("name", "Local Developer");
+            devProfile.put("avatar_url", "https://avatars.githubusercontent.com/u/9919?v=4");
+            devProfile.put("organization", "Local Workspace");
+            devProfile.put("html_url", "https://github.com");
+            devProfile.put("authenticated", true);
+            devProfile.put("authType", "LOCAL");
+            userSessions.put("localdev", devProfile);
+            return devProfile;
+        }
+
+        if (tenantKey.equals("guest") || tenantKey.equals("default")) {
+            Map<String, Object> guestProfile = new HashMap<>();
+            guestProfile.put("login", "Guest");
+            guestProfile.put("name", "Guest User");
+            guestProfile.put("avatar_url", "https://avatars.githubusercontent.com/u/9919?v=4");
+            guestProfile.put("organization", "Local Workspace");
+            guestProfile.put("html_url", "https://github.com");
+            guestProfile.put("authenticated", false);
+            guestProfile.put("authType", "GUEST");
+            return guestProfile;
         }
 
         // Fetch real public profile from GitHub API
@@ -103,7 +128,7 @@ public class AgentController {
     public Map<String, Object> loginUser(@RequestBody Map<String, String> body) {
         String username = body.get("username");
         String token = body.get("token");
-        String cleanUser = (username != null && !username.isBlank()) ? username.trim() : "Pranav1921";
+        String cleanUser = (username != null && !username.isBlank()) ? username.trim() : "Developer";
 
         // Try authenticated GitHub query if token or username provided
         if (token != null && !token.isBlank()) {
@@ -179,14 +204,17 @@ public class AgentController {
     }
 
     @PostMapping("/task")
-    public Map<String, Object> executeTask(@RequestBody TaskRequest request) {
+    public Map<String, Object> executeTask(
+            @RequestBody TaskRequest request,
+            @RequestHeader(value = "X-Gemini-Api-Key", required = false) String geminiHeaderKey,
+            @RequestHeader(value = "X-Model-Id", required = false) String modelHeaderId) {
         String mode = request.getMode() != null ? request.getMode() : "agent";
         String prompt = request.getPrompt() != null ? request.getPrompt() : "";
         String systemInstruction = request.getSystemInstruction();
         Double temperature = request.getTemperature();
 
         if ("ask".equalsIgnoreCase(mode)) {
-            String answer = agentService.executeAskMode(prompt, systemInstruction, temperature);
+            String answer = agentService.executeAskMode(prompt, systemInstruction, temperature, geminiHeaderKey, modelHeaderId);
             return Map.of(
                     "status", "SUCCESS",
                     "mode", mode,
@@ -203,6 +231,35 @@ public class AgentController {
                 "mode", mode,
                 "prompt", prompt,
                 "message", "Task queued for execution");
+    }
+
+    @GetMapping("/landing/info")
+    public Map<String, Object> getLandingInfo() {
+        return Map.of(
+                "title", "Spring AI Autonomous Dev",
+                "version", "2.0.0",
+                "framework", "Spring AI 1.0.0-M4 & Java 17",
+                "status", "ONLINE",
+                "swarmRoles", List.of(
+                        Map.of("id", "ARCHITECT", "name", "Architect", "desc", "System Blueprint & Deconstruct"),
+                        Map.of("id", "CODER", "name", "Coder", "desc", "Modular HTML, CSS & Reactive JS"),
+                        Map.of("id", "TESTER", "name", "QA Tester", "desc", "Automated DOM & Link Verification"),
+                        Map.of("id", "SECURITY_REVIEWER", "name", "Security", "desc", "XSS & Vulnerability Scanning"),
+                        Map.of("id", "DEVOPS", "name", "DevOps", "desc", "Checkpoints & GitHub Synchronization")
+                ),
+                "previewPort", 3000,
+                "backendPort", 8080
+        );
+    }
+
+    @GetMapping("/workspace/info")
+    public Map<String, Object> getWorkspaceInfo() {
+        return Map.of(
+                "workspacePath", fileSystemTool.getCurrentWorkspacePath(),
+                "fileCount", fileSystemTool.scanWorkspace().size(),
+                "status", "READY",
+                "tenant", com.springagent.agent_backend.config.TenantContext.getTenantId()
+        );
     }
 
     // --- Google AI Studio APIs ---
@@ -361,7 +418,7 @@ public class SpringAIClient {
 
     @GetMapping(value = "/agent/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamEvents() {
-        SseEmitter emitter = new SseEmitter(0L); // Infinite timeout, no AsyncRequestTimeoutException
+        SseEmitter emitter = new SseEmitter(Long.MAX_VALUE); // Infinite timeout, prevents AsyncRequestTimeoutException
         agentService.registerEmitter(emitter);
         return emitter;
     }
@@ -383,6 +440,16 @@ public class SpringAIClient {
         return Map.of("status", "TASK_STOPPED");
     }
 
+    @GetMapping("/info")
+    public Map<String, Object> getInfo() {
+        return getLandingInfo();
+    }
+
+    @GetMapping("/health")
+    public Map<String, Object> getHealth() {
+        return Map.of("status", "UP", "backend", "online");
+    }
+
     @GetMapping("/checkpoints")
     public List<Map<String, String>> getCheckpoints() {
         return checkpointService.listCheckpoints();
@@ -394,9 +461,8 @@ public class SpringAIClient {
         String result = checkpointService.restoreCheckpoint(hash);
         return Map.of("result", result, "status", "SUCCESS");
     }
-}
 
-class TaskRequest {
+    public static class TaskRequest {
     private String prompt;
     private String mode;
     private String systemInstruction;
@@ -468,4 +534,5 @@ class TaskRequest {
     public void setTitle(String title) {
         this.title = title;
     }
+}
 }

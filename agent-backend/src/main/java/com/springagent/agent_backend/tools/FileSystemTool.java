@@ -30,14 +30,15 @@ public class FileSystemTool {
     public void init() {
         try {
             Path candidate = null;
-            // 1. Check local workspace in current directory
-            Path localW = Paths.get("workspace").toAbsolutePath().normalize();
+            // 1. Check parent workspace (project root /workspace)
             Path parentW = Paths.get("..", "workspace").toAbsolutePath().normalize();
+            // 2. Check local workspace
+            Path localW = Paths.get("workspace").toAbsolutePath().normalize();
 
-            if (Files.exists(localW) && Files.isWritable(localW)) {
-                candidate = localW;
-            } else if (Files.exists(parentW) && Files.isWritable(parentW)) {
+            if (Files.exists(parentW) && Files.isWritable(parentW)) {
                 candidate = parentW;
+            } else if (Files.exists(localW) && Files.isWritable(localW)) {
+                candidate = localW;
             } else if (workspaceRootPath != null && !workspaceRootPath.isBlank() && !workspaceRootPath.startsWith("C:/AgentWorkspace")) {
                 Path custom = Paths.get(workspaceRootPath).toAbsolutePath().normalize();
                 if (!Files.exists(custom)) Files.createDirectories(custom);
@@ -45,11 +46,13 @@ public class FileSystemTool {
             }
 
             if (candidate == null) {
-                // Default to local "workspace" directory in project
-                if (!Files.exists(localW)) {
-                    Files.createDirectories(localW);
+                if (Files.exists(parentW.getParent()) && Files.isWritable(parentW.getParent())) {
+                    if (!Files.exists(parentW)) Files.createDirectories(parentW);
+                    candidate = parentW;
+                } else {
+                    if (!Files.exists(localW)) Files.createDirectories(localW);
+                    candidate = localW;
                 }
-                candidate = localW;
             }
 
             activeGlobalWorkspaceRoot = candidate;
@@ -75,7 +78,7 @@ public class FileSystemTool {
 
         String cleanTenant = (tenantId != null && !tenantId.isBlank()) 
                 ? tenantId.toLowerCase().replaceAll("[^a-zA-Z0-9_-]", "") 
-                : "pranav1921";
+                : "default";
 
         if (customTenantRoots.containsKey(cleanTenant)) {
             Path customPath = customTenantRoots.get(cleanTenant);
@@ -100,9 +103,13 @@ public class FileSystemTool {
     }
 
     public String setCustomWorkspaceRoot(String customPathStr) {
-        String tenantId = TenantContext.getTenantId();
+        String rawTenant = TenantContext.getTenantId();
+        String tenantId = (rawTenant != null && !rawTenant.isBlank()) 
+                ? rawTenant.toLowerCase().replaceAll("[^a-zA-Z0-9_-]", "") 
+                : "default";
+
         if (customPathStr == null || customPathStr.isBlank()) {
-            activeGlobalWorkspaceRoot = Paths.get(workspaceRootPath);
+            activeGlobalWorkspaceRoot = Paths.get(workspaceRootPath != null ? workspaceRootPath : "workspace").toAbsolutePath().normalize();
             customTenantRoots.remove(tenantId);
             return "Reset to default workspace: " + activeGlobalWorkspaceRoot;
         }
@@ -247,12 +254,12 @@ public class FileSystemTool {
     public String readFile(String relativePath) {
         try {
             Path safePath = resolveSafePath(relativePath);
-            if (!Files.exists(safePath)) {
-                return "ERROR: File not found -> " + relativePath;
+            if (!Files.exists(safePath) || Files.isDirectory(safePath)) {
+                return "";
             }
             return Files.readString(safePath);
         } catch (Exception e) {
-            return "ERROR reading " + relativePath + ": " + e.getMessage();
+            return "";
         }
     }
 

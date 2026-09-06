@@ -23,7 +23,8 @@ Thumbs.db
 workspace/
 agent-backend/new/
 agent-backend/neww/
-agent-backend/New folder/
+agent-backend/New folder*/
+agent-backend/Example/
 
 # Secrets & Local Config
 .env

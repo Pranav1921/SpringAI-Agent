@@ -2,14 +2,186 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Build an interactive browser A</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURA CYBER-X 2088 — Futuristic Sneaker Showcase</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 </head>
-<body>
-  <div style="padding: 24px; text-align: center;">
-    <h1>Build an interactive browser A</h1>
-    <p style="color:#888;">Synthesized autonomously by Spring Agent</p>
-  </div>
+<body class="sneaker-body">
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- Top Glassmorphism Luxury Header -->
+  <header class="glass-navbar">
+    <div class="nav-brand">
+      <span class="brand-glyph">✦</span>
+      <span class="brand-title">AURA // LABS</span>
+      <span class="brand-tag">PROTOTYPE 01</span>
+    </div>
+    <div class="nav-menu">
+      <span class="menu-item active">Sneakers</span>
+      <span class="menu-item">Tech Specs</span>
+      <span class="menu-item">Materials</span>
+      <span class="menu-item">AeroLab</span>
+    </div>
+    <div class="nav-actions">
+      <button id="btnCartToggle" class="glass-cart-btn" title="Open Shopping Bag">
+        <span class="cart-icon">🛍️</span>
+        <span class="cart-text">BAG</span>
+        <span id="cartCountBadge" class="cart-badge">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Showcase Grid -->
+  <main class="showcase-container">
+    <!-- Left Hero 360 Interactive Stage -->
+    <section class="viewer-stage">
+      <div class="stage-header">
+        <span class="badge-pill">360° INTERACTIVE 3D VIEW</span>
+        <div class="rotation-hint">
+          <span class="hint-icon">🔄</span>
+          <span>DRAG OR SWIPE TO ROTATE</span>
+        </div>
+      </div>
+
+      <div class="canvas-3d-wrap" id="canvasWrap">
+        <canvas id="sneakerCanvas" width="680" height="420"></canvas>
+        <div class="canvas-reflection"></div>
+      </div>
+
+      <div class="viewer-controls">
+        <button id="btnAutoSpin" class="ctrl-pill active">
+          <span class="ctrl-icon">⟳</span>
+          <span>AUTO-SPIN: <strong id="spinStatus">ON</strong></span>
+        </button>
+        <button id="btnResetAngle" class="ctrl-pill">
+          <span>RESET ANGLE [0°]</span>
+        </button>
+        <div class="angle-readout">
+          <span class="readout-label">BEARING:</span>
+          <span id="angleValue" class="readout-val">0°</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Product Details & Customizer Panel -->
+    <aside class="customizer-panel">
+      <div class="product-heading">
+        <span class="sub-label">AURA FLIGHT SERIES // EDITION 2088</span>
+        <h1 class="product-title">CYBER-X PRO RUNNER</h1>
+        <div class="price-row">
+          <span class="price-val" id="productPrice">$349.00</span>
+          <span class="edition-badge">LIMITED RUN (500 PAIRS)</span>
+        </div>
+      </div>
+
+      <!-- 1. Colorway Picker -->
+      <div class="option-section">
+        <div class="option-header">
+          <span class="option-title">SELECT COLORWAY:</span>
+          <strong id="selectedColorName" class="colorway-name">Cyber Cyan</strong>
+        </div>
+        <div class="colorway-swatches" id="colorwaySwatches">
+          <button class="color-swatch active" data-color="cyan" data-name="Cyber Cyan" data-hex="#00f5ff" title="Cyber Cyan">
+            <span class="swatch-inner" style="background: linear-gradient(135deg, #00f5ff, #0077ff);"></span>
+          </button>
+          <button class="color-swatch" data-color="gold" data-name="Solar Flare Gold" data-hex="#ffb703" title="Solar Gold">
+            <span class="swatch-inner" style="background: linear-gradient(135deg, #fb8500, #ffb703);"></span>
+          </button>
+          <button class="color-swatch" data-color="violet" data-name="Midnight Neon Violet" data-hex="#d946ef" title="Neon Violet">
+            <span class="swatch-inner" style="background: linear-gradient(135deg, #a855f7, #ec4899);"></span>
+          </button>
+          <button class="color-swatch" data-color="obsidian" data-name="Obsidian Stealth Carbon" data-hex="#475569" title="Obsidian Carbon">
+            <span class="swatch-inner" style="background: linear-gradient(135deg, #334155, #0f172a);"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Size Selector -->
+      <div class="option-section">
+        <div class="option-header">
+          <span class="option-title">SELECT SIZE (US MEN):</span>
+          <span class="size-guide-link">Size Guide ↗</span>
+        </div>
+        <div class="size-grid" id="sizeGrid">
+          <button class="size-box" data-size="US 7.5">7.5</button>
+          <button class="size-box" data-size="US 8.0">8.0</button>
+          <button class="size-box" data-size="US 8.5">8.5</button>
+          <button class="size-box" data-size="US 9.0">9.0</button>
+          <button class="size-box active" data-size="US 9.5">9.5</button>
+          <button class="size-box" data-size="US 10.0">10.0</button>
+          <button class="size-box" data-size="US 10.5">10.5</button>
+          <button class="size-box" data-size="US 11.0">11.0</button>
+          <button class="size-box" data-size="US 11.5">11.5</button>
+          <button class="size-box" data-size="US 12.0">12.0</button>
+        </div>
+      </div>
+
+      <!-- 3. Key Architecture & Tech Specs -->
+      <div class="tech-specs-card">
+        <div class="tech-row">
+          <span class="tech-icon">⚡</span>
+          <div>
+            <strong>Grav-Foam 2.0 Midsole</strong>
+            <p>87% kinetic energy return with micro-pneumatic damping</p>
+          </div>
+        </div>
+        <div class="tech-row">
+          <span class="tech-icon">🛡️</span>
+          <div>
+            <strong>AeroWeave Monofilament Upper</strong>
+            <p>Seamless carbon fiber reinforced ultralight breathability</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. CTA Actions -->
+      <div class="cta-actions">
+        <button id="btnAddToCart" class="btn-primary-add">
+          <span>ADD TO CART — $349</span>
+          <span class="arrow-icon">→</span>
+        </button>
+        <button id="btnWishlist" class="btn-secondary-icon" title="Save to Wishlist">
+          <span id="heartIcon">🤍</span>
+        </button>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Slide-out Glassmorphic Cart Drawer -->
+  <div class="cart-drawer-backdrop hidden" id="cartBackdrop"></div>
+  <aside class="cart-drawer-panel hidden" id="cartDrawer">
+    <div class="cart-drawer-header">
+      <div class="drawer-title">
+        <h3>YOUR SHOPPING BAG</h3>
+        <span class="item-count-label">(<span id="drawerCount">0</span> items)</span>
+      </div>
+      <button id="btnCloseCart" class="drawer-close-btn">✕</button>
+    </div>
+
+    <div class="cart-items-scroll" id="cartItemsList">
+      <!-- Injected by script.js -->
+    </div>
+
+    <div class="cart-drawer-footer">
+      <div class="footer-row">
+        <span>SUBTOTAL:</span>
+        <strong id="cartSubtotal" class="subtotal-val">$0.00</strong>
+      </div>
+      <div class="footer-row text-muted">
+        <span>SHIPPING & TAX:</span>
+        <span>CALCULATED AT CHECKOUT</span>
+      </div>
+      <button id="btnProceedCheckout" class="btn-checkout">PROCEED TO SECURE CHECKOUT ↗</button>
+    </div>
+  </aside>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
   <script src="script.js"></script>
 </body>
 </html>

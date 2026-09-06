@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spring AI Autonomous Dev - Backend Status</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #09090b;
+      color: #ededed;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .glow-bg {
+      background: radial-gradient(circle at 50% 30%, rgba(99, 102, 241, 0.15), transparent 70%);
+    }
+    .card-glass {
+      background: rgba(18, 18, 24, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6 glow-bg selection:bg-[#6366f1] selection:text-white">
+  <div class="max-w-xl w-full space-y-6 text-center animate-fade-in">
+    
+    <!-- Logo Badge -->
+    <div class="inline-flex items-center justify-center p-4 rounded-3xl bg-[#13141a] border border-[#6366f1]/30 shadow-[0_0_40px_rgba(99,102,241,0.25)]">
+      <svg class="w-10 h-10 text-[#818cf8]" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
+      </svg>
+    </div>
+
+    <!-- Title & Status -->
+    <div class="space-y-2">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00f59b]/10 border border-[#00f59b]/30 text-[#00f59b] font-mono text-xs font-semibold">
+        <span class="w-2 h-2 rounded-full bg-[#00f59b] animate-ping"></span>
+        <span>BACKEND SERVICE ONLINE • PORT 8080</span>
+      </div>
+      <h1 class="text-3xl font-extrabold text-white tracking-tight">Spring AI Autonomous Dev</h1>
+      <p class="text-sm text-[#9e9ea7]">The REST &amp; SSE server is actively running and ready to synthesize applications.</p>
+    </div>
+
+    <!-- Telemetry Cards -->
+    <div class="grid grid-cols-2 gap-3 text-left">
+      <div class="card-glass p-4 rounded-2xl space-y-1">
+        <div class="text-[11px] font-mono text-[#71717a] uppercase font-bold">Framework</div>
+        <div class="text-sm font-bold text-white">Spring Boot 3.3.5</div>
+        <div class="text-[11px] text-[#818cf8] font-mono">Spring AI 1.0.0-M4</div>
+      </div>
+      <div class="card-glass p-4 rounded-2xl space-y-1">
+        <div class="text-[11px] font-mono text-[#71717a] uppercase font-bold">Autonomous Swarm</div>
+        <div class="text-sm font-bold text-white">5 Active Agents</div>
+        <div class="text-[11px] text-[#00f59b] font-mono">Architect, Coder, QA...</div>
+      </div>
+    </div>
+
+    <!-- Launch Studio UI CTA Button -->
+    <div class="card-glass p-6 rounded-3xl space-y-4 shadow-2xl">
+      <div class="text-xs text-[#9e9ea7]">
+        To interact with the Autonomous Engineer IDE, open the Web Studio frontend:
+      </div>
+
+      <a href="http://localhost:4200/workspace" class="w-full py-3.5 px-6 rounded-2xl bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-[0_0_24px_rgba(99,102,241,0.4)] hover:shadow-[0_0_32px_rgba(99,102,241,0.6)] active:scale-[0.99] cursor-pointer">
+        <span>Open Autonomous Studio UI (Port 4200)</span>
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+        </svg>
+      </a>
+
+      <!-- Auto redirect countdown -->
+      <div class="text-[11px] font-mono text-[#71717a]">
+        Redirecting to studio in <span id="countdown" class="text-white font-bold">5</span>s...
+      </div>
+    </div>
+
+    <!-- Quick API Health Links -->
+    <div class="flex items-center justify-center gap-4 text-xs font-mono text-[#71717a]">
+      <a href="/api/landing/info" target="_blank" class="hover:text-white transition underline">/api/landing/info</a>
+      <span>•</span>
+      <a href="/api/workspace/info" target="_blank" class="hover:text-white transition underline">/api/workspace/info</a>
+      <span>•</span>
+      <a href="/api/skills" target="_blank" class="hover:text-white transition underline">/api/skills</a>
+    </div>
+
+  </div>
+
+  <script>
+    let seconds = 5;
+    const countdownEl = document.getElementById('countdown');
+    const timer = setInterval(() => {
+      seconds--;
+      if (countdownEl) countdownEl.textContent = seconds;
+      if (seconds <= 0) {
+        clearInterval(timer);
+        window.location.href = 'http://localhost:4200/workspace';
+      }
+    }, 1000);
+  </script>
+</body>
+</html>

@@ -2,7 +2,7 @@ package com.springagent.agent_backend.config;
 
 public class TenantContext {
 
-    private static final String DEFAULT_TENANT = "pranav1921";
+    private static final String DEFAULT_TENANT = "default";
     private static final InheritableThreadLocal<String> CURRENT_TENANT = new InheritableThreadLocal<>();
 
     public static String getTenantId() {

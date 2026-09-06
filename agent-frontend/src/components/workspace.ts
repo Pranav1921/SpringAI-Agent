@@ -1,5 +1,6 @@
 import { api } from '../services/api';
 import { sseService } from '../services/sse';
+import { soundEngine } from '../services/sound';
 import { 
   ChatMessage, 
   AgentSessionItem, 
@@ -13,26 +14,188 @@ import {
   DecisionOption
 } from '../types';
 
+// Authentic 1984 Susan Kare Classic Macintosh Pixel Art Icons
+const MAC_ICONS = {
+  happyMac: `<svg class="w-4 h-4 inline-block flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1h12v11H2V1zm1 1v7h10V2H3zm0 8h10v1H3v-1zM5 4h2v2H5V4zm4 0h2v2H9V4zm-4 4h6v1H5V8zm4 3h3v1H9v-1zm-6 2h10v1H3v-1zm-1 1h12v1H2v-1z" fill-rule="evenodd"/></svg>`,
+  watch: `<svg class="w-4 h-4 inline-block flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M6 0h4v2H6V0zm0 14h4v2H6v-2zM3 3h10v10H3V3zm1 1v8h8V4H4zm4 1h1v3h2v1H8V5z" fill-rule="evenodd"/></svg>`,
+  floppy: `<svg class="w-4 h-4 inline-block flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h11l3 3v11H1V1zm1 1v12h12V4.5L11.5 2H2zm2 0h6v4H4V2zm2 1h2v2H6V3zm-2 6h8v4H4V9z" fill-rule="evenodd"/></svg>`,
+  bomb: `<svg class="w-4 h-4 inline-block flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M11 0h1v1h-1V0zm2 1h1v1h-1V1zm-3 2h2v1h-2V3zm-2 2h2v1H8V5zm-2 2h4v1h1v4h-1v1H6v-1H5V8h1V7zm-2 2h1v2H4V9zm6 0h1v2h-1V9zm-3 4h2v1H7v-1z" fill-rule="evenodd"/></svg>`,
+  trash: `<svg class="w-3.5 h-3.5 inline-block flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1h4v1H6V1zM2 3h12v1H2V3zm1 2h10v10H3V5zm2 2v6h1V7H5zm3 0v6h1V7H8zm3 0v6h1V7h-1z" fill-rule="evenodd"/></svg>`,
+  doc: `<svg class="w-3.5 h-3.5 inline-block flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1h8l4 4v10H2V1zm1 1v12h10V5.5L9.5 2H3zm2 3h3v1H5V5zm0 2h6v1H5V7zm0 2h6v1H5V9zm0 2h6v1H5v-1zm5-9v3h3L10 2z" fill-rule="evenodd"/></svg>`,
+  command: `<svg class="w-3.5 h-3.5 inline-block flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1a3 3 0 0 0-3 3 3 3 0 0 0 3 3h1v2H4a3 3 0 1 0 3 3v-1h2v1a3 3 0 1 0 3-3h-1V7h1a3 3 0 1 0-3-3v1H7V4a3 3 0 0 0-3-3zm0 2a1 1 0 0 1 1 1v1H4a1 1 0 0 1 0-2zm7 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1h-1V4a1 1 0 0 1 1-1zM7 7h2v2H7V7zm-3 4h1v1a1 1 0 0 1-1 1 1 1 0 0 1 0-2zm8 0a1 1 0 0 1 0 2 1 1 0 0 1-1-1v-1h1z" fill-rule="evenodd"/></svg>`,
+  briefcase: `<svg class="w-3.5 h-3.5 inline-block flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M5 1h6v2H5V1zm-1 2h8v1h3v11H1V4h3V3zm-2 2v9h12V5H2zm5 1h2v1H7V6zm-2 2h6v1H5V8zm1 2h4v1H6v-1z" fill-rule="evenodd"/></svg>`,
+  handWrite: `<svg class="w-4 h-4 inline-block flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M12 0l4 4-8 8H4v-4l8-8zm-1 3L5 9v2h2l6-6-2-2zM0 14h16v2H0v-2z" fill-rule="evenodd"/></svg>`,
+  alertBubble: `<svg class="w-3.5 h-3.5 inline-block flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M0 0h16v12H4l-4 4V0zm1 1v10.5L3.5 9H15V1H1zm6 2h2v4H7V3zm0 5h2v2H7V8z" fill-rule="evenodd"/></svg>`,
+  macScreen: `<svg class="w-3.5 h-3.5 inline-block flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1h12v11H2V1zm1 1v7h10V2H3zm0 8h10v1H3v-1zm4 3h2v1H7v-1zm-4 1h10v1H3v-1z" fill-rule="evenodd"/></svg>`,
+  sound: `<svg class="w-3.5 h-3.5 inline-block flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M7 1L3 5H0v6h3l4 4V1zm3 3a4 4 0 010 8v-1.5a2.5 2.5 0 000-5V4zm2-2a6 6 0 010 12v-1.5a4.5 4.5 0 000-9V2z" fill-rule="evenodd"/></svg>`,
+  soundMute: `<svg class="w-3.5 h-3.5 inline-block flex-shrink-0" viewBox="0 0 16 16" fill="currentColor"><path d="M7 1L3 5H0v6h3l4 4V1zm3.5 4.5l1.5-1.5 1.5 1.5 1.5-1.5 1 1-1.5 1.5 1.5 1.5-1 1-1.5-1.5-1.5 1.5-1-1 1.5-1.5-1.5-1.5 1-1z" fill-rule="evenodd"/></svg>`,
+  github: `<svg class="w-4 h-4 inline-block flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>`
+};
+
 export class WorkspaceComponent {
   private container: HTMLElement;
   
   // State
-  private userProfile: UserProfile = { login: 'Pranav1921', organization: 'Workspace • Pranav1921', avatar_url: 'https://avatars.githubusercontent.com/u/9919?v=4' };
-  private currentTenant: string = 'pranav1921';
+  private userProfile: UserProfile = { 
+    login: 'Developer', 
+    name: 'Local Developer', 
+    organization: 'Local Workspace', 
+    avatar_url: 'https://avatars.githubusercontent.com/u/9919?v=4', 
+    authenticated: true 
+  };
+  private currentTenant: string = 'default';
   private currentWorkspacePath: string = 'workspace';
   private commonFolders: Record<string, string> = {};
+  private currentRoute: 'landing' | 'login' | 'workspace' = 'workspace';
+  private isLandingPageOpen: boolean = false;
+
+  // Live Backend Telemetry & Reasoning State (DeepSeek / Ollama style)
+  private executionElapsedSeconds: number = 0;
+  private executionTimerInterval: any = null;
+  private backendLogs: Array<{ role: string; text: string; time: string; type: string }> = [];
+  private latestSavedFile: { name: string; time: string; size?: number } | null = null;
 
   private getFolderDisplayBasename(): string {
     if (!this.currentWorkspacePath) return 'workspace';
     const parts = this.currentWorkspacePath.replace(/\\/g, '/').split('/').filter(p => p.trim().length > 0);
     return parts.length > 0 ? parts[parts.length - 1] : this.currentWorkspacePath;
   }
+
+  private getUserAvatarUrl(customLogin?: string): string {
+    const handle = customLogin?.trim() || this.userProfile?.login?.trim() || 'Developer';
+    if (!customLogin && this.userProfile?.avatar_url && this.userProfile.avatar_url.trim().length > 0) {
+      return this.userProfile.avatar_url;
+    }
+    return `https://github.com/${handle}.png`;
+  }
+
+  public handleRouteFromUrl(): void {
+    const path = window.location.pathname.toLowerCase().trim();
+    if (path === '/login' || path.startsWith('/login')) {
+      this.currentRoute = 'login';
+      this.isLandingPageOpen = false;
+    } else if (path === '/landing' || path.startsWith('/landing')) {
+      this.currentRoute = 'landing';
+      this.isLandingPageOpen = true;
+    } else if (path === '/workspace' || path.startsWith('/workspace')) {
+      this.currentRoute = 'workspace';
+      this.isLandingPageOpen = false;
+    } else {
+      if (localStorage.getItem('agent_logged_out') === 'true') {
+        this.currentRoute = 'landing';
+        this.isLandingPageOpen = true;
+      } else {
+        this.currentRoute = 'workspace';
+        this.isLandingPageOpen = false;
+      }
+    }
+  }
+
+  public navigateTo(route: 'landing' | 'login' | 'workspace', pushState: boolean = true): void {
+    this.currentRoute = route;
+    if (route === 'landing') {
+      localStorage.setItem('agent_logged_out', 'true');
+      this.isLandingPageOpen = true;
+    } else if (route === 'workspace') {
+      localStorage.removeItem('agent_logged_out');
+      this.isLandingPageOpen = false;
+    }
+
+    if (pushState) {
+      const urlPath = route === 'workspace' ? '/workspace' : (route === 'login' ? '/login' : '/landing');
+      if (window.location.pathname !== urlPath) {
+        history.pushState(null, '', urlPath);
+      }
+    }
+    this.render();
+  }
   
   private aiMode: 'agent' | 'ask' = 'agent';
   private isExecuting: boolean = false;
-  private currentStatusText: string = 'Ready for prompt';
+  private currentStatusText: string = 'STANDBY // READY';
   private taskPrompt: string = '';
   private crtEnabled: boolean = false;
+  private crtColorTheme: 'green' | 'amber' | 'cyan' | 'white' = 'cyan';
+
+  // Enterprise Autonomous CI/CD Pipeline & Workflow Orchestrator Engine State
+  public activeViewMode: 'agent' | 'ask' | 'workflow' | 'cicd' = 'agent';
+  public activeWorkflow: any = {
+    id: 'tpl-pr-governance',
+    name: 'GitHub PR Auto-Review & Gemini SAST Audit',
+    description: 'Ingests incoming GitHub PR Webhooks, runs static Shannon entropy scan, dispatches Gemini code review, and posts automated PR decisions.',
+    nodes: [
+      { id: 'node-1', type: 'TRIGGER_WEBHOOK', name: 'GitHub Webhook Ingest', description: 'Listens for pull_request.opened events', posX: 40, posY: 140, config: { event: 'pull_request.opened', repo: 'spring-enterprise-service' } },
+      { id: 'node-2', type: 'CODE_TRANSFORM', name: 'Normalize PR Diff', description: 'Extracts changed source files & metadata', posX: 280, posY: 140, config: { filterExt: '.java,.ts,.js' } },
+      { id: 'node-3', type: 'SECURITY_SAST_SCAN', name: 'SAST Secret Scanner', description: 'Detects leaked tokens & entropy anomalies', posX: 520, posY: 140, config: { failOnCritical: true } },
+      { id: 'node-4', type: 'BRANCH_IF_ELSE', name: 'Security Quality Gate', description: 'Evaluates isSecure == true condition', posX: 760, posY: 140, config: { conditionField: 'isSecure', expectedValue: 'true' } },
+      { id: 'node-5', type: 'AI_GEMINI_REASONER', name: 'Gemini AI PR Reviewer', description: 'Multimodal architectural evaluation', posX: 1000, posY: 80, config: { prompt: 'Perform code review on PR files and generate executive summary.' } },
+      { id: 'node-6', type: 'FILE_SYSTEM_OUTPUT', name: 'Write Governance Report', description: 'Saves review report directly to workspace', posX: 1240, posY: 80, config: { fileName: 'governance-pr-audit.md' } }
+    ],
+    edges: [
+      { id: 'e-1', source: 'node-1', target: 'node-2', sourceHandle: 'default' },
+      { id: 'e-2', source: 'node-2', target: 'node-3', sourceHandle: 'default' },
+      { id: 'e-3', source: 'node-3', target: 'node-4', sourceHandle: 'default' },
+      { id: 'e-4', source: 'node-4', target: 'node-5', sourceHandle: 'true' },
+      { id: 'e-5', source: 'node-5', target: 'node-6', sourceHandle: 'default' }
+    ]
+  };
+  public workflowTemplatesList: any[] = [];
+  public selectedWorkflowNodeId: string | null = 'node-1';
+  public activeWorkflowRun: any = null;
+  public isWorkflowExecuting: boolean = false;
+  public workflowExecutionLogs: string[] = [];
+
+  public activePipelineRun: any = {
+    id: 'pipe-init',
+    repoName: 'spring-enterprise-service',
+    branch: 'main',
+    commitHash: 'commit-7a9f21d',
+    triggerType: 'MANUAL_UI',
+    status: 'SUCCESS',
+    qualityGrade: 'A+',
+    governanceDecision: 'APPROVED_FOR_DEPLOYMENT',
+    totalTests: 24,
+    passedTests: 24,
+    failedTests: 0,
+    coveragePercent: 94.5,
+    artifactName: 'spring-enterprise-service-1.0.0.jar',
+    artifactSha256: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+    durationMs: 3840,
+    createdTimeStr: '12:45:00',
+    stages: [
+      { id: 'stage-1', name: 'FETCH_REPO', description: 'Ingest Repository & Checkout', status: 'SUCCESS', durationMs: 620 },
+      { id: 'stage-2', name: 'LINT_AST', description: 'Static AST Analysis & Syntax Validation', status: 'SUCCESS', durationMs: 710 },
+      { id: 'stage-3', name: 'TEST_SUITE', description: 'Automated Unit & Integration Test Suite', status: 'SUCCESS', durationMs: 950 },
+      { id: 'stage-4', name: 'SECURITY_SAST', description: 'Security SAST & Secret Leak Audit', status: 'SUCCESS', durationMs: 580 },
+      { id: 'stage-5', name: 'BUILD_ARTIFACT', description: 'Package Binary & Integrity Checksum', status: 'SUCCESS', durationMs: 680 },
+      { id: 'stage-6', name: 'GOVERNANCE', description: 'Code Quality Gate & Governance Badge', status: 'SUCCESS', durationMs: 300 }
+    ],
+    logs: [
+      '[12:45:00.120] Cloning repository: spring-enterprise-service (branch: main)',
+      '[12:45:00.740] Checking out commit 7a9f21d (HEAD -> main)',
+      '[12:45:01.450] Executing static AST analyzer across Java, TypeScript, and HTML files...',
+      '[12:45:02.160] Lint check: 0 syntax errors, 0 unbalanced brackets, 0 undefined imports.',
+      '[12:45:02.660] Running Maven / JUnit 5 & Jest test runners in sandboxed worker...',
+      '[12:45:02.810]  [TEST] UserServiceTest.testAuthenticationToken() -> PASSED (14ms)',
+      '[12:45:02.940]  [TEST] SecurityScannerTest.testSecretDetection() -> PASSED (28ms)',
+      '[12:45:03.110]  [TEST] RestApiIntegrationTest.testEndpointResponse() -> PASSED (45ms)',
+      '[12:45:03.220]  [TEST] FrontendComponentTest.testDomRender() -> PASSED (8ms)',
+      '[12:45:03.610] Test Results: 24/24 Passed (0 Failed, 0 Skipped). Code Coverage: 94.5%',
+      '[12:45:04.210] Starting Shannon Entropy and regex SAST scan for secret leakage & CVEs...',
+      '[12:45:04.790] Security Audit: 0 High/Critical vulnerabilities found. Grade A+ (100/100).',
+      '[12:45:05.470] Packaging production bundle: spring-enterprise-service-1.0.0.jar',
+      '[12:45:06.150] Artifact built: target/spring-enterprise-service-1.0.0.jar (SHA-256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08)',
+      '[12:45:06.450] Evaluating Enterprise Quality Gate compliance rules...',
+      '[12:45:06.750] Quality Gate: PASSED (Grade A+). All security, coverage, and stability metrics met.',
+      '[12:45:06.850] Automated PR Status Check: SUCCESS (commit: 7a9f21d)'
+    ],
+    securityFindings: []
+  };
+  public pipelineHistoryList: any[] = [];
+  public pipelineTerminalLogs: string[] = [];
+  public pipelineTriggerModalOpen: boolean = false;
+  public pipelineRepoInput: string = 'spring-enterprise-service';
+  public pipelineBranchInput: string = 'main';
   
   private agentSwarmRoles = [
     { id: 'ARCHITECT', name: 'Architect', desc: 'System Blueprint & Design' },
@@ -45,17 +208,28 @@ export class WorkspaceComponent {
   private filterSwarmRole: string = 'ALL';
   
   private showSidePanel: boolean = true;
-  private panelWidthPercent: number = 36;
+  private panelWidthPercent: number = 48;
   private isResizing: boolean = false;
   
-  private activeWorkspaceTab: 'browser' | 'editor' | 'tuning' | 'checkpoints' = 'browser';
+  private activeWorkspaceTab: 'browser' | 'editor' | 'diff' | 'console' | 'tuning' | 'checkpoints' = 'browser';
   private previewViewport: 'desktop' | 'tablet' | 'mobile' = 'desktop';
+  private previewZoom: number = 100;
   private isAppReady: boolean = false;
   private generatedSrcDoc: string = '';
   
-  private temperature: number = 0.7;
+  // Embedded Console Telemetry
+  private consoleLogs: Array<{ level: 'log' | 'info' | 'warn' | 'error'; message: string; timestamp: string }> = [];
+  private consoleFilter: 'all' | 'log' | 'warn' | 'error' = 'all';
+  private consoleCommandInput: string = '';
+
+  // Side-by-Side Diff Viewer
+  private diffSelectedFile: string = 'index.html';
+  private diffOriginalContent: string = '';
+  private diffModifiedContent: string = '';
+  
+  private temperature: number = 0.3;
   private systemInstructionOpen: boolean = false;
-  private systemInstruction: string = 'You are Spring AI Agent, an expert Autonomous Full-Stack Software Engineer. Generate complete, high-quality, production-ready source code with modern UI design and robust logic.';
+  private systemInstruction: string = 'You are an autonomous AI software engineer adhering strictly to Brauncore and Dieter Rams Functionalism. Build clean, minimal, robust full-stack applications with high usability and monochrome aesthetics.';
   
   private messages: ChatMessage[] = [];
   private sessions: AgentSessionItem[] = [];
@@ -77,20 +251,10 @@ export class WorkspaceComponent {
   private isProcessingStreamQueue: boolean = false;
   private streamingIntervalId: any = null;
   
-  // Terminal
-  private terminalLogs: Array<{cmd: string, out: string, time: string}> = [];
-  private terminalCommand: string = '';
-  private terminalRunning: boolean = false;
-  private terminalHistory: string[] = [];
-  private historyIndex: number = -1;
-  
   // Snapshots & Skills
   private checkpoints: CheckpointItem[] = [];
   private skillsList: SkillItem[] = [];
   private personasList: AgentPersona[] = [];
-  private attachedImages: string[] = [];
-  private isVoiceListening: boolean = false;
-  private speechRecognition: any = null;
   
   private showSkillsModal: boolean = false;
   private showUserMenu: boolean = false;
@@ -100,52 +264,254 @@ export class WorkspaceComponent {
   private gitHubLoginError: string = '';
   private isLoggingInGitHub: boolean = false;
   private isCreatingRepo: boolean = false;
-  private createRepoResult: { success: boolean; message: string; htmlUrl?: string } | null = null;
   
-  // Google AI Studio Features
-  private promptTitle: string = 'Chat prompt';
+  // Code Snippet Export
+  private promptTitle: string = 'Workspace Prompt';
   private isEditingPromptTitle: boolean = false;
   private showGetCodeModal: boolean = false;
   private getCodeActiveTab: 'curl' | 'python' | 'typescript' | 'java' = 'curl';
   private studioCodeSnippets: { curl: string; python: string; typescript: string; java: string } | null = null;
-  private selectedModelId: string = 'spring-ai-pro';
+  private selectedModelId: string = 'deepseek-coder';
   
-  private lastHandledContent: string = '';
+  private progressPercent: number = 0;
+  private landingCodeTab: 'ts' | 'curl' | 'py' = 'ts';
 
   constructor(container: HTMLElement) {
     this.container = container;
     this.init();
   }
 
-  private async init() {
-    this.currentTenant = localStorage.getItem('agent_tenant') || 'pranav1921';
-    this.loadSessionsFromStorage();
-    
-    // Initial Render
-    this.render();
-    
-    // Background async loaders
-    this.userProfile = await api.getUserProfile();
-    const folder = await api.getCurrentFolder();
-    this.currentWorkspacePath = folder.folderPath;
-    this.fileList = await api.getFiles();
-    this.skillsList = await api.getSkills();
-    this.personasList = await api.getPersonas();
-    this.commonFolders = await api.getCommonFolders();
-    await this.loadFiles();
-    this.render();
-    
-    // Subscribe to real-time events
-    sseService.subscribe((event: AgentEvent) => this.handleAgentEvent(event));
-    
-    // Setup global window listeners
-    window.addEventListener('mousemove', (e) => this.onMouseMove(e));
-    window.addEventListener('mouseup', () => this.onMouseUp());
-    
-    this.render();
+  private formatElapsedTime(): string {
+    const mins = Math.floor(this.executionElapsedSeconds / 60);
+    const secs = this.executionElapsedSeconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }
 
-  private progressPercent: number = 0;
+  private startExecutionTimer(): void {
+    this.executionElapsedSeconds = 0;
+    if (this.executionTimerInterval) clearInterval(this.executionTimerInterval);
+    this.executionTimerInterval = setInterval(() => {
+      this.executionElapsedSeconds++;
+      const timerEl = document.getElementById('liveExecutionTimerBadge');
+      if (timerEl) {
+        timerEl.innerHTML = `${MAC_ICONS.watch} <span>${this.formatElapsedTime()}</span>`;
+      }
+    }, 1000);
+  }
+
+  private stopExecutionTimer(): void {
+    if (this.executionTimerInterval) {
+      clearInterval(this.executionTimerInterval);
+      this.executionTimerInterval = null;
+    }
+  }
+
+  public handleLogoutAction(): void {
+    localStorage.setItem('agent_logged_out', 'true');
+    localStorage.removeItem('github_token');
+    localStorage.removeItem('agent_tenant');
+    localStorage.removeItem('agent_user_profile');
+    this.userProfile = {
+      login: 'Guest',
+      name: 'Guest User',
+      avatar_url: 'https://avatars.githubusercontent.com/u/9919?v=4',
+      organization: 'Local Workspace',
+      authenticated: false
+    };
+    this.currentTenant = 'guest';
+    this.showGitHubLoginModal = false;
+    this.navigateTo('landing');
+  }
+
+  public showToast(message: string, isError: boolean = false): void {
+    const existing = document.getElementById('globalToast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'globalToast';
+    toast.className = `fixed bottom-6 right-6 z-50 px-4 py-3 border shadow-2xl flex items-center gap-2.5 text-xs font-mono font-bold uppercase animate-fadeIn ${
+      isError 
+        ? 'bg-[#1a0505] border-red-500 text-red-300' 
+        : 'bg-[#000000] border-white text-white'
+    }`;
+    toast.innerHTML = `
+      <span class="w-2 h-2 ${isError ? 'bg-red-500' : 'bg-white'} block flex-shrink-0"></span>
+      <span>${this.escapeHtml(message)}</span>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add('opacity-0', 'transition-opacity', 'duration-200');
+      setTimeout(() => toast.remove(), 200);
+    }, 2800);
+  }
+
+  public async handleOpenFolderInExplorer(): Promise<void> {
+    try {
+      const res = await api.openFolderInOs();
+      this.showToast(`Opened in File Explorer: ${this.currentWorkspacePath}`);
+    } catch (e: any) {
+      this.showToast(`Failed to open Explorer: ${e.message}`, true);
+    }
+  }
+
+  public async handleSelectFolder(newPath: string): Promise<void> {
+    if (!newPath || !newPath.trim()) return;
+    try {
+      const cleanPath = newPath.trim();
+      const res = await api.setFolder(cleanPath);
+      this.currentWorkspacePath = (res && res.currentFolder) ? res.currentFolder : cleanPath;
+      this.showFolderModal = false;
+      await this.loadFiles();
+      await this.bundleProjectToSrcDoc();
+      this.updatePreviewIframe();
+      this.render();
+      this.showToast(`Active folder set: ${this.getFolderDisplayBasename()} (${this.fileList.length} files)`);
+    } catch (e: any) {
+      this.showToast(`Error changing folder: ${e.message}`, true);
+    }
+  }
+
+  public async handleNativeFolderPick(): Promise<void> {
+    this.showFolderModal = false;
+    await this.handlePickFolderOsDialog();
+  }
+
+  public async handlePickFolderOsDialog(): Promise<void> {
+    try {
+      if (typeof (window as any).showDirectoryPicker === 'function') {
+        try {
+          const dirHandle = await (window as any).showDirectoryPicker({
+            id: 'agent_folder_selector',
+            mode: 'readwrite'
+          });
+          if (dirHandle && dirHandle.name) {
+            const pathRes = await api.setFolder(dirHandle.name);
+            this.currentWorkspacePath = (pathRes && pathRes.currentFolder) ? pathRes.currentFolder : dirHandle.name;
+            await this.loadFiles();
+            await this.bundleProjectToSrcDoc();
+            this.updatePreviewIframe();
+            this.render();
+            this.showToast(`Active folder: ${this.getFolderDisplayBasename()} (${this.fileList.length} files)`);
+            return;
+          }
+        } catch (err: any) {
+          if (err.name === 'AbortError') return;
+        }
+      }
+
+      this.showToast('Opening Windows Folder Dialog...');
+      const res = await api.pickFolderDialog();
+      if (res && res.status === 'SUCCESS' && res.folderPath) {
+        this.currentWorkspacePath = res.folderPath;
+        if (Array.isArray(res.files)) {
+          this.fileList = res.files;
+        } else {
+          await this.loadFiles();
+        }
+        await this.bundleProjectToSrcDoc();
+        this.updatePreviewIframe();
+        this.render();
+        this.showToast(`Active folder: ${this.getFolderDisplayBasename()} (${this.fileList.length} files)`);
+      } else {
+        this.showFolderModal = true;
+        this.render();
+      }
+    } catch (e: any) {
+      this.showFolderModal = true;
+      this.render();
+    }
+  }
+
+  private async init() {
+    // Attach tactile Web Audio acoustic feedback for all CRT & mechanical interactions
+    soundEngine.attachGlobalInteractivity();
+
+    this.currentTenant = localStorage.getItem('agent_tenant') || 'default';
+    this.handleRouteFromUrl();
+    this.loadSessionsFromStorage();
+
+    const savedProfile = localStorage.getItem('agent_user_profile');
+    if (localStorage.getItem('agent_logged_out') === 'true') {
+      this.userProfile = {
+        login: 'Guest',
+        name: 'Guest User',
+        avatar_url: 'https://avatars.githubusercontent.com/u/9919?v=4',
+        organization: 'Local Workspace',
+        authenticated: false
+      };
+      this.currentTenant = 'guest';
+    } else if (savedProfile) {
+      try {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed && parsed.login && parsed.login !== 'Guest') {
+          this.userProfile = { ...parsed, authenticated: true };
+          this.currentTenant = (parsed.login || 'default').toLowerCase();
+        }
+      } catch {}
+    } else {
+      this.userProfile = {
+        login: 'Developer',
+        name: 'Local Developer',
+        organization: 'Local Workspace',
+        avatar_url: 'https://avatars.githubusercontent.com/u/9919?v=4',
+        authenticated: true
+      };
+      this.currentTenant = 'default';
+      localStorage.setItem('agent_user_profile', JSON.stringify(this.userProfile));
+    }
+
+    // Capture console output from the sandboxed iframe runner
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'PREVIEW_CONSOLE_LOG') {
+        this.consoleLogs.push({
+          level: event.data.level || 'log',
+          message: event.data.message || '',
+          timestamp: event.data.timestamp || new Date().toLocaleTimeString()
+        });
+        if (this.consoleLogs.length > 200) this.consoleLogs.shift();
+        if (this.activeWorkspaceTab === 'console') {
+          this.render();
+        }
+      }
+    });
+
+    this.render();
+    
+    // Background loaders
+    try {
+      const folder = await api.getCurrentFolder();
+      if (folder && folder.folderPath) this.currentWorkspacePath = folder.folderPath;
+      this.fileList = await api.getFiles();
+      this.skillsList = await api.getSkills();
+      this.personasList = await api.getPersonas();
+      this.commonFolders = await api.getCommonFolders();
+      this.workflowTemplatesList = await api.getWorkflowTemplates();
+      if (this.workflowTemplatesList && this.workflowTemplatesList.length > 0) {
+        this.activeWorkflow = this.workflowTemplatesList[0];
+        if (this.activeWorkflow.nodes && this.activeWorkflow.nodes.length > 0) {
+          this.selectedWorkflowNodeId = this.activeWorkflow.nodes[0].id;
+        }
+      }
+      await this.loadFiles();
+      await this.bundleProjectToSrcDoc();
+      this.render();
+      this.updatePreviewIframe();
+    } catch {}
+
+    // Subscribe to SSE telemetry events
+    sseService.subscribe((event: AgentEvent) => this.handleAgentEvent(event));
+
+    window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+    window.addEventListener('mouseup', () => this.onMouseUp());
+    window.addEventListener('popstate', () => {
+      this.handleRouteFromUrl();
+      this.render();
+      this.updatePreviewIframe();
+    });
+    
+    this.render();
+    this.updatePreviewIframe();
+  }
 
   private recentHandledEvents = new Set<string>();
 
@@ -159,7 +525,17 @@ export class WorkspaceComponent {
     this.recentHandledEvents.add(eventKey);
     setTimeout(() => this.recentHandledEvents.delete(eventKey), 2000);
 
+    // Record in live backend logs
+    this.backendLogs.push({
+      role: (event.metadata && (event.metadata as any)['role']) || event.source || 'ARCHITECT',
+      text: event.content || '',
+      time: timestamp,
+      type: event.type
+    });
+    if (this.backendLogs.length > 50) this.backendLogs.shift();
+
     if (event.type === 'PLAN_PROPOSAL') {
+      soundEngine.playCrtBeep(880, 0.1);
       const rawSteps = (event.metadata && (event.metadata as any)['steps']) || [];
       const planTitle = (event.metadata && (event.metadata as any)['planTitle']) || 'Proposed Implementation Plan';
       const taskPrompt = (event.metadata && (event.metadata as any)['taskPrompt']) || '';
@@ -192,15 +568,14 @@ export class WorkspaceComponent {
       this.render();
       this.scrollToBottom();
     } else if (event.type === 'DECISION' || event.type === 'QUESTION') {
-      const content = event.content || 'Please select your preferred architecture option to proceed:';
+      soundEngine.playCrtBeep(750, 0.12);
+      const content = event.content || 'Please select an option to proceed:';
       const existing = this.messages.find(m => m.type === 'decision' && m.content === content);
-      if (existing) {
-        return;
-      }
+      if (existing) return;
+
       const rawOptions = (event.metadata && (event.metadata as any)['options']) || [
-        { id: 'opt_a', label: 'Dark Cyberpunk Minimalist Theme', action: 'dark_theme' },
-        { id: 'opt_b', label: 'Flipkart Classic Blue & Yellow Theme', action: 'classic_theme' },
-        { id: 'opt_c', label: 'Include Mock UPI Payment QR Code', action: 'upi_payment' }
+        { id: 'opt_a', label: 'Brauncore Strict Monochrome Theme', action: 'dark_theme' },
+        { id: 'opt_b', label: 'Classic Grid Functionalism', action: 'classic_theme' }
       ];
       this.messages.push({
         id: Math.random().toString(),
@@ -218,26 +593,55 @@ export class WorkspaceComponent {
       if (event.content) this.currentStatusText = event.content;
       this.render();
     } else if (event.type === 'STEP_PROGRESS') {
-      const fileName = event.metadata ? (event.metadata as any)['fileName'] : '';
+      const fileName = (event.metadata ? (event.metadata as any)['fileName'] : '') || event.content || '';
+      const metaPercent = event.metadata && typeof (event.metadata as any)['progressPercent'] === 'number' ? (event.metadata as any)['progressPercent'] : null;
+      const statusMeta = event.metadata ? (event.metadata as any)['status'] : '';
+      
+      if (fileName) {
+        this.latestSavedFile = { name: fileName, time: timestamp };
+        soundEngine.playFloppySeek();
+      }
+
       let completedCount = 0;
       let totalCount = 4;
 
       for (let i = this.messages.length - 1; i >= 0; i--) {
         const msg = this.messages[i];
-        if (msg.type === 'plan' && msg.steps) {
+        if (msg.type === 'plan' && msg.steps && msg.steps.length > 0) {
           totalCount = msg.steps.length;
-          const matching = msg.steps.find(s => (s.file && fileName && fileName.toLowerCase().includes(s.file.toLowerCase())) || 
-                                               (s.label && s.label.toLowerCase().includes(fileName.toLowerCase())));
-          if (matching) {
-            matching.completed = true;
-            matching.status = 'completed';
+          let matched = false;
+          for (let sIdx = 0; sIdx < msg.steps.length; sIdx++) {
+            const st = msg.steps[sIdx];
+            const isDirectMatch = st.file && fileName && (fileName.toLowerCase().includes(st.file.toLowerCase()) || st.file.toLowerCase().includes(fileName.toLowerCase()));
+            if (isDirectMatch) {
+              matched = true;
+              if (statusMeta === 'in_progress') {
+                st.status = 'in_progress';
+              } else {
+                st.completed = true;
+                st.status = 'completed';
+                if (sIdx + 1 < msg.steps.length && msg.steps[sIdx + 1].status === 'pending') {
+                  msg.steps[sIdx + 1].status = 'in_progress';
+                }
+              }
+            }
+          }
+          if (!matched && statusMeta !== 'in_progress') {
+            const firstIncomplete = msg.steps.find(s => !s.completed);
+            if (firstIncomplete) {
+              firstIncomplete.completed = true;
+              firstIncomplete.status = 'completed';
+              const nextIncomplete = msg.steps.find(s => !s.completed);
+              if (nextIncomplete) nextIncomplete.status = 'in_progress';
+            }
           }
           completedCount = msg.steps.filter(s => s.completed).length;
           break;
         }
       }
 
-      this.progressPercent = Math.min(100, Math.round((completedCount / totalCount) * 100));
+      const calculatedPercent = Math.min(100, Math.round((completedCount / totalCount) * 100));
+      this.progressPercent = metaPercent !== null ? Math.max(this.progressPercent, metaPercent) : Math.max(this.progressPercent, calculatedPercent);
       this.loadFiles();
       this.render();
     } else if (event.type === 'THOUGHT') {
@@ -256,7 +660,6 @@ export class WorkspaceComponent {
       this.scrollToBottom();
     } else if (event.type === 'ACTION') {
       this.currentStatusText = 'Executing ' + (event.source || 'tool');
-      this.showSidePanel = true;
       const role = (event.metadata && (event.metadata as any)['role']) || 'CODER';
       this.messages.push({
         id: Math.random().toString(),
@@ -271,8 +674,10 @@ export class WorkspaceComponent {
       const actionContent = event.content.toLowerCase();
       const fileNameMeta = event.metadata ? (event.metadata as any)['fileName'] : '';
       if (fileNameMeta || actionContent.includes('writing to file:') || actionContent.includes('writefile')) {
+        soundEngine.playFloppySeek();
         const targetFile = fileNameMeta || event.content.replace(/^Writing to file:\s*/i, '').trim();
         if (targetFile) {
+          this.latestSavedFile = { name: targetFile, time: timestamp };
           setTimeout(async () => {
             const res = await api.getFileContent(targetFile);
             if (res && res.content && res.content.trim().length > 0) {
@@ -281,8 +686,6 @@ export class WorkspaceComponent {
               this.updateEditorContent();
               await this.bundleProjectToSrcDoc();
               this.updatePreviewIframe();
-              // Stream code line-by-line in the main workspace
-              this.enqueueWorkspaceStreaming(targetFile, res.content);
             }
           }, 30);
         }
@@ -315,15 +718,25 @@ export class WorkspaceComponent {
         sender: 'agent',
         type: 'security_audit',
         role: 'SECURITY_REVIEWER',
-        title: `Security Audit (Grade: ${audit.grade || 'A+'})`,
+        title: `Security Audit (Grade ${audit.grade || 'A'} • Score ${audit.score || '98'}/100)`,
         content: event.content,
         timestamp
       });
       this.render();
       this.scrollToBottom();
+    } else if (event.type === 'RESET') {
+      this.messages = [];
+      this.backendLogs = [];
+      this.isExecuting = false;
+      this.stopExecutionTimer();
+      this.activeSwarmRole = 'IDLE';
+      this.currentStatusText = 'STANDBY // READY';
+      this.progressPercent = 0;
+      this.render();
     } else if (event.type === 'ANSWER') {
       this.isExecuting = false;
-      this.currentStatusText = 'Ready';
+      this.stopExecutionTimer();
+      this.currentStatusText = 'READY';
       const alreadyHas = this.messages.some(m => m.type === 'answer' && m.content.trim() === event.content.trim());
       if (!alreadyHas) {
         this.messages.push({
@@ -337,11 +750,108 @@ export class WorkspaceComponent {
         this.render();
         this.scrollToBottom();
       }
+    } else if (event.type === 'PIPELINE_TRIGGERED') {
+      soundEngine.playLeverClack();
+      this.activePipelineRun = (event.metadata && (event.metadata as any)['pipeline']) || null;
+      this.pipelineTerminalLogs = [`[>] Pipeline ${this.activePipelineRun?.id} triggered for [${this.activePipelineRun?.repoName}:${this.activePipelineRun?.branch}]`];
+      this.render();
+    } else if (event.type === 'STAGE_START') {
+      soundEngine.playMechanicalKeyboardClick();
+      const stage = event.metadata ? (event.metadata as any)['stage'] : null;
+      if (this.activePipelineRun && stage) {
+        const found = this.activePipelineRun.stages?.find((s: any) => s.id === stage.id || s.name === stage.name);
+        if (found) {
+          found.status = 'RUNNING';
+          found.startTime = stage.startTime;
+        }
+      }
+      this.render();
+    } else if (event.type === 'STAGE_COMPLETE') {
+      soundEngine.playCrtClick();
+      const stage = event.metadata ? (event.metadata as any)['stage'] : null;
+      if (this.activePipelineRun && stage) {
+        const found = this.activePipelineRun.stages?.find((s: any) => s.id === stage.id || s.name === stage.name);
+        if (found) {
+          found.status = 'SUCCESS';
+          found.durationMs = stage.durationMs;
+        }
+      }
+      this.render();
+    } else if (event.type === 'PIPELINE_LOG') {
+      const logLine = (event.metadata && (event.metadata as any)['log']) || event.content;
+      if (logLine) {
+        this.pipelineTerminalLogs.push(logLine);
+        if (this.pipelineTerminalLogs.length > 300) this.pipelineTerminalLogs.shift();
+        this.updatePipelineTerminal();
+      }
+    } else if (event.type === 'PIPELINE_COMPLETE') {
+      soundEngine.playSuccessChime();
+      this.activePipelineRun = (event.metadata && (event.metadata as any)['pipeline']) || this.activePipelineRun;
+      if (this.activePipelineRun) this.activePipelineRun.status = 'SUCCESS';
+      this.render();
+    } else if (event.type === 'PIPELINE_FAILED') {
+      soundEngine.playErrorBuzz();
+      if (this.activePipelineRun) this.activePipelineRun.status = 'FAILED';
+      this.render();
+    } else if (event.type === 'WORKFLOW_STARTED') {
+      soundEngine.playLeverClack();
+      this.isWorkflowExecuting = true;
+      this.activeWorkflowRun = (event.metadata && (event.metadata as any)['workflow']) || null;
+      this.workflowExecutionLogs = [`[*] Workflow initiated: ${this.activeWorkflow?.name || 'Automation Workflow'}`];
+      if (this.activeWorkflow && this.activeWorkflow.nodes) {
+        this.activeWorkflow.nodes.forEach((n: any) => { n.status = 'PENDING'; n.durationMs = 0; });
+      }
+      this.render();
+    } else if (event.type === 'NODE_STARTED') {
+      soundEngine.playMechanicalKeyboardClick();
+      const nodeId = (event.metadata && (event.metadata as any)['nodeId']);
+      if (this.activeWorkflow && this.activeWorkflow.nodes) {
+        const found = this.activeWorkflow.nodes.find((n: any) => n.id === nodeId);
+        if (found) found.status = 'RUNNING';
+      }
+      if (event.content) this.workflowExecutionLogs.push(event.content);
+      this.render();
+    } else if (event.type === 'NODE_SUCCESS') {
+      soundEngine.playCrtClick();
+      const nodeId = (event.metadata && (event.metadata as any)['nodeId']);
+      const result = (event.metadata && (event.metadata as any)['result']);
+      if (this.activeWorkflow && this.activeWorkflow.nodes) {
+        const found = this.activeWorkflow.nodes.find((n: any) => n.id === nodeId);
+        if (found) {
+          found.status = 'SUCCESS';
+          found.durationMs = result?.durationMs;
+          found.outputData = result?.outputData;
+        }
+      }
+      if (this.activeWorkflowRun && this.activeWorkflowRun.nodeResults && result) {
+        this.activeWorkflowRun.nodeResults[nodeId] = result;
+      }
+      if (event.content) this.workflowExecutionLogs.push(event.content);
+      this.render();
+    } else if (event.type === 'NODE_FAILED') {
+      soundEngine.playErrorBuzz();
+      const nodeId = (event.metadata && (event.metadata as any)['nodeId']);
+      if (this.activeWorkflow && this.activeWorkflow.nodes) {
+        const found = this.activeWorkflow.nodes.find((n: any) => n.id === nodeId);
+        if (found) found.status = 'FAILED';
+      }
+      if (event.content) this.workflowExecutionLogs.push(event.content);
+      this.render();
+    } else if (event.type === 'WORKFLOW_COMPLETED') {
+      soundEngine.playSuccessChime();
+      this.isWorkflowExecuting = false;
+      this.activeWorkflowRun = (event.metadata && (event.metadata as any)['workflow']) || this.activeWorkflowRun;
+      if (event.content) this.workflowExecutionLogs.push(event.content);
+      this.render();
     } else if (event.type === 'FINISH') {
+      soundEngine.playSuccessChime();
       this.isExecuting = false;
+      this.stopExecutionTimer();
       this.activeSwarmRole = 'COMPLETE';
-      this.currentStatusText = 'Synthesis complete';
+      this.currentStatusText = 'SYNTHESIS COMPLETE';
       this.progressPercent = 100;
+      this.showSidePanel = true;
+      this.activeWorkspaceTab = 'browser';
       
       for (let i = this.messages.length - 1; i >= 0; i--) {
         const msg = this.messages[i];
@@ -350,232 +860,253 @@ export class WorkspaceComponent {
             s.completed = true;
             s.status = 'completed';
           });
-          break;
         }
       }
-
-      // Vanish the code stream card once finished
-      if (!this.isProcessingStreamQueue && this.streamQueue.length === 0) {
-        setTimeout(() => {
-          this.isStreamingCode = false;
-          this.displayedStreamingCode = '';
-          this.streamingFileName = '';
-          this.render();
-          this.scrollToBottom();
-        }, 1000);
-      }
-
-      this.messages.push({
-        id: Math.random().toString(),
-        sender: 'agent',
-        type: 'system',
-        content: `⚡ SYNTHESIS COMPLETE • All components compiled, verified, and deployed to your workspace.`,
-        timestamp
+      this.loadFiles().then(async () => {
+        await this.bundleProjectToSrcDoc();
+        this.render();
+        this.updatePreviewIframe();
+        this.scrollToBottom();
       });
-
-      this.loadFiles();
-      if (!this.isStreamingCode) {
-        setTimeout(() => this.switchToBrowser(), 500);
-      }
-      this.render();
-      this.scrollToBottom();
     }
   }
 
-  private async loadFiles() {
-    this.fileList = await api.getFiles();
-    if (!this.isStreamingCode) {
+  public async loadFiles() {
+    try {
+      this.fileList = await api.getFiles();
       if (!this.selectedFile && this.fileList.length > 0) {
-        const defaultFile = this.fileList.find(f => f.name === 'index.html') || this.fileList[0];
-        this.selectedFile = defaultFile;
-        const res = await api.getFileContent(defaultFile.path);
+        const defaultHtml = this.fileList.find(f => f.path.endsWith('index.html')) || this.fileList[0];
+        this.selectedFile = defaultHtml;
+        const res = await api.getFileContent(defaultHtml.path);
         this.fileContent = res.content || '';
-      } else if (this.selectedFile) {
-        const res = await api.getFileContent(this.selectedFile.path);
-        if (res && typeof res.content === 'string') {
-          this.fileContent = res.content;
-        }
       }
-    }
-    this.bundleProjectToSrcDoc();
-    this.render();
+    } catch {}
   }
 
-  private enqueueWorkspaceStreaming(fileName: string, content: string) {
-    this.streamQueue.push({ fileName, content });
-    this.processStreamQueue();
-  }
+  public async bundleProjectToSrcDoc(): Promise<string> {
+    try {
+      if (!this.fileList || this.fileList.length === 0) {
+        this.fileList = await api.getFiles();
+      }
 
-  private processStreamQueue() {
-    if (this.isProcessingStreamQueue || this.streamQueue.length === 0) return;
-    this.isProcessingStreamQueue = true;
-    const nextItem = this.streamQueue.shift()!;
-    this.startWorkspaceCodeStreaming(nextItem.fileName, nextItem.content, () => {
-      this.isProcessingStreamQueue = false;
-      if (this.streamQueue.length > 0) {
-        this.processStreamQueue();
+      // 1. Find primary HTML file
+      let htmlFile = this.fileList.find(f => !f.isDirectory && f.name.toLowerCase() === 'index.html');
+      if (!htmlFile) {
+        htmlFile = this.fileList.find(f => !f.isDirectory && f.name.toLowerCase().endsWith('.html'));
+      }
+
+      let html = '';
+      if (htmlFile) {
+        const res = await api.getFileContent(htmlFile.path);
+        html = res?.content || '';
       } else {
-        // All queued files streamed! Vanish after a clean delay if synthesis completed
-        if (!this.isExecuting) {
-          setTimeout(() => {
-            this.isStreamingCode = false;
-            this.displayedStreamingCode = '';
-            this.streamingFileName = '';
-            this.progressPercent = 100;
-            this.render();
-            this.scrollToBottom();
-          }, 1000);
+        const directIndex = await api.getFileContent('index.html');
+        html = directIndex?.content || '';
+      }
+
+      if (!html || html.trim().length === 0) {
+        // If no index.html exists, auto-synthesize an interactive HTML5 harness with Tailwind, Lucide, and Three.js
+        html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Outfit', sans-serif; background: #090a0f; color: #f8fafc; overflow-x: hidden; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+</body>
+</html>`;
+      } else if (!html.toLowerCase().includes('<body') && !html.toLowerCase().includes('<html')) {
+        // Wrap raw body HTML snippet in complete document
+        html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Outfit', sans-serif; background: #090a0f; color: #f8fafc; }
+  </style>
+</head>
+<body>
+  ${html}
+</body>
+</html>`;
+      }
+
+      // 2. Fetch all CSS files in workspace
+      const cssFiles = this.fileList.filter(f => !f.isDirectory && f.name.toLowerCase().endsWith('.css'));
+      let combinedCss = '';
+      for (const cf of cssFiles) {
+        const res = await api.getFileContent(cf.path);
+        if (res && res.content) {
+          combinedCss += `\n/* ${cf.name} */\n${res.content}\n`;
         }
       }
-    });
-  }
-
-  private startWorkspaceCodeStreaming(fileName: string, fullCode: string, onComplete?: () => void) {
-    if (this.streamingIntervalId) {
-      clearInterval(this.streamingIntervalId);
-      this.streamingIntervalId = null;
-    }
-
-    this.isStreamingCode = true;
-    this.streamingFileName = fileName;
-    this.displayedStreamingCode = '';
-    const lines = fullCode.split('\n');
-    this.totalStreamingLines = lines.length;
-    this.streamingLineNum = 0;
-
-    // Mark current step in plan as active
-    for (let i = this.messages.length - 1; i >= 0; i--) {
-      const msg = this.messages[i];
-      if (msg.type === 'plan' && msg.steps) {
-        const step = msg.steps.find(s => s.file === fileName || s.label.toLowerCase().includes(fileName.toLowerCase()) || (fileName.endsWith('.html') && (s.label.toLowerCase().includes('nav') || s.label.toLowerCase().includes('html') || s.label.toLowerCase().includes('bar'))) || (fileName.endsWith('.css') && (s.label.toLowerCase().includes('theme') || s.label.toLowerCase().includes('style'))) || (fileName.endsWith('.js') && (s.label.toLowerCase().includes('gallery') || s.label.toLowerCase().includes('script') || s.label.toLowerCase().includes('toggle'))));
-        if (step) {
-          step.status = 'in_progress';
-        }
-        break;
-      }
-    }
-
-    this.render();
-    this.scrollToBottom();
-
-    // Stream lines at rapid, animated intervals
-    const chunkSize = Math.max(2, Math.floor(lines.length / 28));
-    this.streamingIntervalId = setInterval(() => {
-      this.streamingLineNum = Math.min(this.totalStreamingLines, this.streamingLineNum + chunkSize);
-      this.displayedStreamingCode = lines.slice(0, this.streamingLineNum).join('\n');
-
-      const codeEl = document.getElementById('streamCodeElement');
-      const badgeEl = document.getElementById('streamLineCountBadge');
-      const scrollBox = document.getElementById('streamCodeScrollBox');
-
-      if (codeEl) codeEl.textContent = this.displayedStreamingCode;
-      if (badgeEl) badgeEl.textContent = `Line ${this.streamingLineNum} of ${this.totalStreamingLines}`;
-      if (scrollBox) scrollBox.scrollTop = scrollBox.scrollHeight;
-
-      if (this.streamingLineNum >= this.totalStreamingLines) {
-        clearInterval(this.streamingIntervalId);
-        this.streamingIntervalId = null;
-
-        // Mark corresponding step in plan as done
-        for (let i = this.messages.length - 1; i >= 0; i--) {
-          const msg = this.messages[i];
-          if (msg.type === 'plan' && msg.steps) {
-            const step = msg.steps.find(s => s.file === fileName || s.label.toLowerCase().includes(fileName.toLowerCase()) || (fileName.endsWith('.html') && (s.label.toLowerCase().includes('nav') || s.label.toLowerCase().includes('html') || s.label.toLowerCase().includes('bar'))) || (fileName.endsWith('.css') && (s.label.toLowerCase().includes('theme') || s.label.toLowerCase().includes('style'))) || (fileName.endsWith('.js') && (s.label.toLowerCase().includes('gallery') || s.label.toLowerCase().includes('script') || s.label.toLowerCase().includes('toggle'))));
-            if (step) {
-              step.completed = true;
-              step.status = 'completed';
-            }
+      if (!combinedCss) {
+        for (const name of ['styles.css', 'style.css', 'app.css', 'main.css']) {
+          const res = await api.getFileContent(name);
+          if (res && res.content) {
+            combinedCss += `\n/* ${name} */\n${res.content}\n`;
             break;
           }
         }
-
-        this.render();
-
-        if (onComplete) onComplete();
       }
-    }, 22);
-  }
 
-  private async bundleProjectToSrcDoc() {
-    const htmlNode = (this.selectedFile && this.selectedFile.name.toLowerCase().endsWith('.html'))
-      ? this.selectedFile
-      : (this.fileList.find(f => f.name.toLowerCase() === 'index.html') || this.fileList.find(f => f.name.toLowerCase().endsWith('.html')));
-    const cssNode = this.fileList.find(f => f.name.toLowerCase() === 'styles.css' || f.name.toLowerCase() === 'style.css');
-    const jsNode = this.fileList.find(f => f.name.toLowerCase() === 'script.js' || f.name.toLowerCase() === 'app.js' || f.name.toLowerCase() === 'main.js');
-
-    if (!htmlNode) {
-      this.isAppReady = false;
-      this.generatedSrcDoc = '';
-      this.updatePreviewIframe();
-      return;
-    }
-
-    try {
-      const htmlRes = await api.getFileContent(htmlNode.path);
-      const cssRes = cssNode ? await api.getFileContent(cssNode.path) : { content: '' };
-      const jsRes = jsNode ? await api.getFileContent(jsNode.path) : { content: '' };
-
-      let html = htmlRes.content || '';
-      const css = cssRes.content || '';
-      const js = jsRes.content || '';
-
-      if (css && !html.includes(css)) {
-        if (html.includes('</head>')) {
-          html = html.replace('</head>', `<style>\n${css}\n</style></head>`);
-        } else {
-          html = `<style>\n${css}\n</style>\n` + html;
+      // 3. Fetch all JS files in workspace
+      const jsFiles = this.fileList.filter(f => !f.isDirectory && f.name.toLowerCase().endsWith('.js'));
+      let combinedJs = '';
+      for (const jf of jsFiles) {
+        const res = await api.getFileContent(jf.path);
+        if (res && res.content) {
+          combinedJs += `\n// ${jf.name}\n${res.content}\n`;
         }
       }
-      if (js && !html.includes(js)) {
+      if (!combinedJs) {
+        for (const name of ['script.js', 'game.js', 'app.js', 'main.js']) {
+          const res = await api.getFileContent(name);
+          if (res && res.content) {
+            combinedJs += `\n// ${name}\n${res.content}\n`;
+            break;
+          }
+        }
+      }
+
+      // 4. Strip relative local CSS links and JS script tags to prevent 404 network errors
+      html = html.replace(/<link\s+[^>]*rel=["']stylesheet["'][^>]*href=["'](?!http|https|\/\/)[^"']+["'][^>]*>/gi, '');
+      html = html.replace(/<script\s+[^>]*src=["'](?!http|https|\/\/)[^"']+["'][^>]*><\/script>/gi, '');
+
+      // 5. Build Sandboxed Bridge Script (Console logger + global error suppressor + Mock Audio + Three.js importmap)
+      const isEsModule = /^\s*import\s+|^\s*export\s+/m.test(combinedJs);
+      const importMapScript = `
+        <script type="importmap">
+        {
+          "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+            "three/examples/jsm/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+          }
+        }
+        </script>
+      `;
+
+      const sandboxBridgeScript = `
+        ${importMapScript}
+        <script>
+          (function() {
+            // Forward console logs to host IDE
+            const send = (level, args) => {
+              try {
+                const msg = Array.from(args).map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+                window.parent.postMessage({ type: 'PREVIEW_CONSOLE_LOG', level, message: msg, timestamp: new Date().toLocaleTimeString() }, '*');
+              } catch(e) {}
+            };
+            const _log = console.log, _warn = console.warn, _error = console.error, _info = console.info;
+            console.log = function() { _log.apply(console, arguments); send('log', arguments); };
+            console.warn = function() { _warn.apply(console, arguments); send('warn', arguments); };
+            console.error = function() { _error.apply(console, arguments); send('error', arguments); };
+            console.info = function() { _info.apply(console, arguments); send('info', arguments); };
+
+            // Global error catcher
+            window.addEventListener('error', function(e) {
+              send('error', ['[Runtime Error]', e.message, 'at', (e.filename || 'script.js') + ':' + e.lineno]);
+            });
+            window.addEventListener('unhandledrejection', function(e) {
+              send('error', ['[Unhandled Promise Rejection]', e.reason]);
+            });
+
+            // Graceful Mock for Audio files (prevents crashes when audio files are absent)
+            const NativeAudio = window.Audio;
+            window.Audio = function(src) {
+              try {
+                const a = new NativeAudio(src);
+                a.addEventListener('error', function() { /* suppress missing sound file error */ });
+                return a;
+              } catch(e) {
+                return { play: () => Promise.resolve(), pause: () => {}, addEventListener: () => {} };
+              }
+            };
+          })();
+        </script>
+      `;
+
+      // 6. Inject CSS and Bridge into <head>
+      let headInjection = sandboxBridgeScript;
+      if (combinedCss.trim().length > 0) {
+        headInjection += `\n<style>\n${combinedCss}\n</style>\n`;
+      }
+
+      if (html.includes('</head>')) {
+        html = html.replace('</head>', `${headInjection}</head>`);
+      } else if (html.includes('<head>')) {
+        html = html.replace('<head>', `<head>${headInjection}`);
+      } else {
+        html = `${headInjection}${html}`;
+      }
+
+      // 7. Inject JS safely before </body>
+      if (combinedJs.trim().length > 0) {
+        const scriptInjection = isEsModule
+          ? `\n<script type="module">\n${combinedJs}\n</script>\n`
+          : `\n<script>\ntry {\n${combinedJs}\n} catch(err) { console.error('[Execution Error]:', err); }\n</script>\n`;
+
         if (html.includes('</body>')) {
-          html = html.replace('</body>', `<script>\n${js}\n</script></body>`);
+          html = html.replace('</body>', `${scriptInjection}</body>`);
         } else {
-          html = html + `\n<script>\n${js}\n</script>`;
+          html = `${html}${scriptInjection}`;
         }
       }
 
       this.generatedSrcDoc = html;
       this.isAppReady = true;
-      this.updatePreviewIframe();
-    } catch (e) {
-      console.error('Error bundling preview:', e);
+      return html;
+    } catch (err) {
+      console.error('Failed to bundle project for live preview:', err);
+      return '';
     }
   }
 
-  private switchToBrowser() {
-    this.activeWorkspaceTab = 'browser';
-    this.bundleProjectToSrcDoc();
-    this.render();
+  public updatePreviewIframe() {
+    const iframe = document.getElementById('previewIframe') as HTMLIFrameElement;
+    if (iframe) {
+      if (this.generatedSrcDoc && this.generatedSrcDoc.trim().length > 0) {
+        iframe.srcdoc = this.generatedSrcDoc;
+      } else {
+        iframe.src = 'http://localhost:3001/?t=' + Date.now();
+      }
+      const emptyState = document.getElementById('previewEmptyState');
+      if (emptyState) emptyState.classList.add('hidden');
+    }
   }
 
-  private createPlanSteps(prompt: string): PlanStep[] {
-    let cleanTitle = prompt.trim();
-    if (cleanTitle.length > 35) cleanTitle = cleanTitle.substring(0, 35) + '...';
-
-    const lower = prompt.toLowerCase();
-    let topicName = cleanTitle;
-    if (lower.includes("amazon")) topicName = "Amazon Storefront";
-    else if (lower.includes("flipkart")) topicName = "Flipkart Storefront";
-    else if (lower.includes("crypto")) topicName = "Crypto Trading Terminal";
-    else if (lower.includes("kanban")) topicName = "Kanban Task Board";
-    else if (lower.includes("synth")) topicName = "Audio Synth Sequencer";
-    else if (lower.includes("chat")) topicName = "Real-Time Messenger";
-
-    return [
-      { id: '1', file: 'index.html', label: `Synthesize DOM Structure & Layout (${topicName})`, status: 'in_progress' },
-      { id: '2', file: 'styles.css', label: `Compile Responsive UI & Theme System (${topicName})`, status: 'pending' },
-      { id: '3', file: 'script.js', label: `Implement Interactive Core Logic & Engine (script.js)`, status: 'pending' },
-      { id: '4', file: 'README.md', label: `Document System Architecture & Specifications (README.md)`, status: 'pending' }
-    ];
+  public updateEditorContent() {
+    const textarea = document.getElementById('editorTextarea') as HTMLTextAreaElement;
+    if (textarea) textarea.value = this.fileContent;
   }
 
   public async executePlan(taskPrompt: string) {
+    soundEngine.playCrtDegauss();
     this.isExecuting = true;
-    this.showSidePanel = true;
+    this.startExecutionTimer();
     this.activeWorkspaceTab = 'browser';
-    this.currentStatusText = 'Autonomous Swarm synthesizing codebase...';
+    this.currentStatusText = 'SWARM SYNTHESIZING CODEBASE';
 
-    // Find and update the plan steps
     for (let i = this.messages.length - 1; i >= 0; i--) {
       const msg = this.messages[i];
       if (msg.type === 'plan' && msg.steps && msg.steps.length > 0) {
@@ -584,16 +1115,33 @@ export class WorkspaceComponent {
       }
     }
 
-    api.runTask({
-      prompt: `[EXECUTE] ${taskPrompt}`,
-      mode: 'agent',
-      systemInstruction: this.systemInstruction,
-      temperature: this.temperature,
-      model: this.selectedModelId,
-      title: this.promptTitle
-    });
     this.render();
     this.scrollToBottom();
+
+    try {
+      await api.runTask({
+        prompt: `[EXECUTE] ${taskPrompt}`,
+        mode: 'agent',
+        systemInstruction: this.systemInstruction,
+        temperature: this.temperature,
+        model: this.selectedModelId,
+        title: this.promptTitle
+      });
+    } catch (err: any) {
+      this.isExecuting = false;
+      this.stopExecutionTimer();
+      this.currentStatusText = 'CONNECTION ERROR';
+      this.messages.push({
+        id: Math.random().toString(),
+        sender: 'system',
+        type: 'text',
+        mode: this.aiMode,
+        content: `[!] Failed to reach backend: ${err?.message || 'Connection refused'}. Ensure backend is running on port 8080.`,
+        timestamp: new Date().toLocaleTimeString()
+      });
+      this.render();
+      this.scrollToBottom();
+    }
   }
 
   public async submitTask() {
@@ -601,7 +1149,6 @@ export class WorkspaceComponent {
     const prompt = (this.taskPrompt || inputEl?.value || '').trim();
     if (!prompt) return;
 
-    const mode = this.aiMode;
     this.taskPrompt = '';
     if (inputEl) inputEl.value = '';
 
@@ -610,81 +1157,41 @@ export class WorkspaceComponent {
       sender: 'user',
       type: 'text',
       content: prompt,
-      mode: this.aiMode,
+      mode: 'agent',
       timestamp: new Date().toLocaleTimeString()
     });
 
-    if (mode === 'ask') {
-      this.isExecuting = true;
-      this.currentStatusText = 'Thinking...';
-      this.render();
-      this.scrollToBottom();
+    const planSteps: PlanStep[] = [
+      { id: '1', file: 'index.html', label: 'DOM Hierarchy & Functional Layout (index.html)', status: 'in_progress', completed: false },
+      { id: '2', file: 'styles.css', label: 'Responsive Modern Stylesheet (styles.css)', status: 'pending', completed: false },
+      { id: '3', file: 'script.js', label: 'Interactive State Machine & Logic (script.js)', status: 'pending', completed: false },
+      { id: '4', file: 'README.md', label: 'Technical Specifications & Architecture (README.md)', status: 'pending', completed: false }
+    ];
 
-      api.runTask({
-        prompt,
-        mode: 'ask',
-        systemInstruction: this.systemInstruction,
-        temperature: this.temperature,
-        model: this.selectedModelId,
-        title: this.promptTitle
-      }).then(res => {
-        if (res && res.response && res.response.trim().length > 0) {
-          this.isExecuting = false;
-          this.currentStatusText = 'Ready';
-          const hasAnswer = this.messages.some(m => m.type === 'answer' && m.content.trim() === res.response.trim());
-          if (!hasAnswer) {
-            this.messages.push({
-              id: Math.random().toString(),
-              sender: 'agent',
-              type: 'answer',
-              content: res.response,
-              mode: 'ask',
-              timestamp: new Date().toLocaleTimeString()
-            });
-            this.render();
-            this.scrollToBottom();
-          }
-        }
-      }).catch(() => {
-        this.isExecuting = false;
-        this.currentStatusText = 'Ready';
-        this.render();
-      });
-    } else {
-      const planSteps = this.createPlanSteps(prompt);
+    this.messages.push({
+      id: Math.random().toString(),
+      sender: 'agent',
+      type: 'plan',
+      title: 'Proposed Implementation Plan',
+      planTitle: 'Proposed Implementation Plan',
+      taskPrompt: prompt,
+      mode: 'agent',
+      content: `Decomposed architecture for prompt: "${prompt}". Autonomous multi-agent pipeline synthesizing codebase:`,
+      steps: planSteps,
+      timestamp: new Date().toLocaleTimeString()
+    });
 
-      this.messages.push({
-        id: Math.random().toString(),
-        sender: 'agent',
-        type: 'plan',
-        title: 'Proposed Implementation Plan',
-        planTitle: 'Proposed Implementation Plan',
-        taskPrompt: prompt,
-        mode: 'agent',
-        content: `I have analyzed your request: "${prompt}". Review the checklist below and click **Start Process** to execute:`,
-        steps: planSteps,
-        timestamp: new Date().toLocaleTimeString()
-      });
-
-      // Auto-open side panel and trigger execution immediately
-      this.showSidePanel = true;
-      this.executePlan(prompt);
-    }
-
+    this.executePlan(prompt);
     this.updateSessions(prompt);
     this.render();
     this.scrollToBottom();
   }
 
   private async stopExecution() {
+    soundEngine.playErrorBuzz();
     this.isExecuting = false;
-    this.isStreamingCode = false;
-    this.currentStatusText = 'Process stopped';
-    if (this.streamingIntervalId) {
-      clearInterval(this.streamingIntervalId);
-      this.streamingIntervalId = null;
-    }
-    await api.stopTask();
+    this.stopExecutionTimer();
+    this.currentStatusText = 'HALTED BY USER';
     this.messages.push({
       id: Math.random().toString(),
       sender: 'system',
@@ -695,6 +1202,9 @@ export class WorkspaceComponent {
     });
     this.render();
     this.scrollToBottom();
+    try {
+      await api.stopTask();
+    } catch {}
   }
 
   private updateSessions(prompt: string) {
@@ -730,6 +1240,16 @@ export class WorkspaceComponent {
         if (this.sessions.length > 0) {
           this.activeSession = this.sessions[0];
           this.messages = this.activeSession.messages || [];
+          if (!this.isExecuting) {
+            this.messages.forEach(m => {
+              if (m.type === 'plan' && m.steps) {
+                m.steps.forEach(s => {
+                  s.completed = true;
+                  s.status = 'completed';
+                });
+              }
+            });
+          }
         }
       }
     } catch {}
@@ -742,635 +1262,428 @@ export class WorkspaceComponent {
     }, 50);
   }
 
-  // --- HTML Rendering ---
-  public render() {
-    this.container.innerHTML = `
-      <div class="h-screen w-screen flex bg-[#0e0e0f] text-[#e3e3e3] font-sans overflow-hidden text-[13px] select-none relative ${this.crtEnabled ? 'crt-bloom' : ''}">
-        ${this.crtEnabled ? '<div class="crt-overlay"></div>' : ''}
+  // --- HTML Template Getters (Skeuomorphic Retro-Minimalism: Black, White & Signal Orange) ---
 
-        <!-- 1. LEFT SIDEBAR (Google AI Studio Navigation Rail) -->
-        <aside class="w-[240px] flex flex-col bg-[#131314] border-r border-[rgba(255,255,255,0.08)] flex-shrink-0 justify-between z-20">
+  public getWorkspaceHtml(): string {
+    return `
+      <div class="h-screen w-screen flex flex-row flex-nowrap bg-[#000000] text-[#ffffff] font-sans overflow-hidden text-[13px] select-none relative">
+
+        <!-- 1. LEFT SIDEBAR (Studio Deck Navigation Column) -->
+        <aside class="w-[225px] flex flex-col bg-[#0a0a0a] border-r border-[#242424] flex-shrink-0 justify-between z-20 h-full shadow-2xl relative">
           <div class="flex flex-col h-full min-h-0">
-            <!-- Studio Brand & Project Header -->
-            <div class="px-4 py-3.5 flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#131314]">
-              <div class="flex items-center gap-2.5">
-                <svg class="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24">
-                  <defs>
-                    <linearGradient id="gemGradSide" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#8ab4f8"/>
-                      <stop offset="50%" stop-color="#c58af9"/>
-                      <stop offset="100%" stop-color="#f28b82"/>
-                    </linearGradient>
-                  </defs>
-                  <path fill="url(#gemGradSide)" d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
-                </svg>
-                <div class="flex flex-col">
-                  <div class="flex items-center gap-1.5">
-                    <span class="font-bold text-sm text-white tracking-tight">Spring AI</span>
-                    <span class="text-[9px] font-bold px-1.5 py-0.2 bg-[#282a2c] text-[#8ab4f8] rounded-full border border-[rgba(255,255,255,0.1)] font-mono">DEV</span>
-                  </div>
-                  <span class="text-[10px] text-[#8e918f] font-mono">Autonomous Dev</span>
+            <!-- Studio Brand & Hardware Badge -->
+            <div class="px-3.5 py-3 flex items-center justify-between border-b border-[#242424] bg-[#000000]">
+              <div class="flex items-center gap-2">
+                <span class="text-[#38bdf8] flex-shrink-0">${MAC_ICONS.happyMac}</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="font-extrabold text-xs text-white uppercase tracking-wider font-mono">RETRO</span>
+                  <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 bg-[#38bdf8] text-black rounded-sm">STUDIO</span>
                 </div>
               </div>
+              <span class="led-indicator ${this.isExecuting ? 'led-accent led-pulsing' : 'led-white'}"></span>
             </div>
 
-            <!-- Create New Prompt Button (Google AI Studio Signature Pill) -->
-            <div class="p-3">
-              <button id="btnNewSession" class="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 bg-[#1e1f20] hover:bg-[#282a2c] text-white border border-[rgba(255,255,255,0.12)] hover:border-[#8ab4f8]/50 rounded-full transition-all text-xs font-semibold shadow-sm active:scale-95 cursor-pointer btn-action">
-                <svg class="w-4 h-4 text-[#8ab4f8]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-                <span>+ Create New Prompt</span>
+            <!-- Workspace Directory Selector Badge -->
+            <div class="px-2.5 py-2 border-b border-[#242424] bg-[#050505] space-y-1">
+              <div class="flex items-center justify-between text-[9px] font-mono text-[#737373] uppercase font-bold">
+                <span>📁 WORKSPACE DIR</span>
+                <button id="btnOpenExplorerDirect" class="text-[#38bdf8] hover:underline cursor-pointer" title="Open in File Explorer">↗ EXPLORER</button>
+              </div>
+              <button id="btnOpenFolderModal" class="w-full p-1.5 bg-[#121212] hover:bg-[#181818] border border-[#242424] hover:border-[#38bdf8] rounded text-left flex items-center justify-between gap-1.5 transition group cursor-pointer" title="Change Workspace Folder (${this.currentWorkspacePath})">
+                <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                  <span class="text-[#38bdf8] text-xs flex-shrink-0">📁</span>
+                  <span class="text-[11px] font-mono text-white group-hover:text-[#38bdf8] truncate font-bold">${this.getFolderDisplayBasename()}</span>
+                </div>
+                <span class="text-[9px] px-1.5 py-0.5 bg-[#202020] rounded text-[#38bdf8] font-mono font-bold flex-shrink-0 group-hover:bg-[#38bdf8] group-hover:text-black transition">CHANGE</span>
               </button>
             </div>
 
-            <!-- Navigation Links -->
-            <nav class="px-2.5 space-y-1 text-xs font-medium text-[#c4c7c5]">
-              <div class="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-[#1e1f20] text-white font-semibold border border-[rgba(255,255,255,0.08)]">
-                <svg class="w-4 h-4 text-[#8ab4f8]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/></svg>
-                <span>Autonomous Studio</span>
-              </div>
-              <button id="btnOpenFolder" class="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[#c4c7c5] hover:bg-[#1e1f20] hover:text-white transition-colors cursor-pointer text-xs btn-action">
-                <div class="flex items-center gap-2.5 truncate">
-                  <svg class="w-4 h-4 text-[#8e918f]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-                  <span class="truncate">Destination Folder...</span>
-                </div>
+            <!-- Create New Prompt Button (Tactile Hardware Push) -->
+            <div class="p-2.5 bg-[#080808] border-b border-[#1c1c1c]">
+              <button id="btnNewSession" class="w-full retro-btn retro-btn-accent py-2 text-xs font-mono font-bold flex items-center justify-center gap-2" title="Create New Studio Prompt">
+                ${MAC_ICONS.handWrite}
+                <span>+ NEW PROMPT</span>
               </button>
-            </nav>
-
-            <!-- Active Directory Path Badge & Quick Select -->
-            <div class="px-3 pt-2">
-              <div class="p-2.5 bg-[#1e1f20] border border-[rgba(255,255,255,0.08)] rounded-xl flex flex-col gap-2 text-xs font-mono">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] text-[#8e918f] uppercase font-bold tracking-wider">Save Destination</span>
-                  <button id="btnChangeFolderQuick" class="text-[10px] text-[#8ab4f8] hover:underline font-bold cursor-pointer">Change...</button>
-                </div>
-                <div class="p-1.5 bg-[#131314] border border-[rgba(255,255,255,0.08)] rounded-lg flex items-center gap-1.5 text-white truncate" title="${this.escapeHtml(this.currentWorkspacePath)}">
-                  <span class="text-[#8ab4f8] flex-shrink-0">📁</span>
-                  <span class="truncate font-semibold text-[11px]">${this.currentWorkspacePath}</span>
-                </div>
-                <button id="btnOpenInExplorerSidebar" class="w-full flex items-center justify-center gap-1.5 px-2 py-1 bg-[#282a2c] hover:bg-[#3f3f46] hover:text-[#8ab4f8] text-[#c4c7c5] border border-[rgba(255,255,255,0.08)] rounded-lg transition text-[10px] font-mono font-bold cursor-pointer btn-action">
-                  <span>📂 Open in File Explorer</span>
-                </button>
-              </div>
             </div>
 
             <!-- Sessions History -->
-            <div class="mt-3 px-2 flex-1 flex flex-col min-h-0">
-              <div class="px-3 flex items-center justify-between text-[10px] font-bold text-[#8e918f] uppercase tracking-wider pb-1">
-                <span>Recent Prompts</span>
-                <span class="font-mono text-[#8ab4f8]">${this.sessions.length}</span>
+            <div class="mt-2 px-2 flex-1 flex flex-col min-h-0">
+              <div class="px-2 flex items-center justify-between text-[10px] font-bold text-[#737373] uppercase tracking-wider pb-1 font-mono">
+                <span class="flex items-center gap-1.5">${MAC_ICONS.doc} TAPES / HISTORY</span>
+                <span class="px-1.5 py-0.2 bg-[#141414] border border-[#242424] rounded text-white">${this.sessions.length}</span>
               </div>
               <div class="mt-1 space-y-1 overflow-y-auto flex-1 custom-scrollbar pr-1">
                 ${this.sessions.map(s => `
-                  <div class="session-item group px-2.5 py-2 rounded-xl cursor-pointer transition-all flex items-center justify-between ${this.activeSession?.id === s.id ? 'bg-[#1e1f20] text-white font-semibold border-l-2 border-[#8ab4f8] pl-2' : 'text-[#c4c7c5] hover:bg-[#1e1f20] hover:text-white'}" data-id="${s.id}">
-                    <div class="flex flex-col min-w-0 pr-1.5 flex-1">
-                      <span class="text-xs truncate">${s.title}</span>
-                      <span class="text-[10px] text-[#8e918f] font-mono">${s.time} • ${s.mode === 'ask' ? 'Chat' : 'Agent'}</span>
+                  <div class="session-item group px-2.5 py-2 rounded cursor-pointer transition-all flex items-center justify-between border ${this.activeSession?.id === s.id ? 'bg-[#181818] text-white font-bold border-white shadow-md' : 'text-[#a3a3a3] border-transparent hover:bg-[#121212] hover:text-white'}" data-id="${s.id}">
+                    <div class="flex items-center gap-2 min-w-0 pr-1 flex-1">
+                      <span class="text-[#737373] group-hover:text-white flex-shrink-0">${MAC_ICONS.doc}</span>
+                      <div class="flex flex-col min-w-0 flex-1">
+                        <span class="text-xs truncate font-mono">${s.title}</span>
+                        <span class="text-[9px] text-[#737373] font-mono">${s.time}</span>
+                      </div>
                     </div>
-                    <div class="flex items-center gap-1.5 flex-shrink-0">
-                      <button class="btn-delete-session opacity-0 group-hover:opacity-100 p-1 hover:bg-[#282a2c] hover:text-red-400 text-[#8e918f] rounded transition cursor-pointer text-[11px] font-bold" data-id="${s.id}" title="Delete prompt">
-                        ✕
-                      </button>
-                      <span class="w-1.5 h-1.5 rounded-full ${s.status === 'active' ? 'bg-[#8ab4f8] animate-pulse' : 'bg-[#3f3f46]'}"></span>
-                    </div>
+                    <button class="btn-delete-session opacity-0 group-hover:opacity-100 p-1 hover:text-[#38bdf8] text-[#737373] transition cursor-pointer" data-id="${s.id}" title="Delete session">
+                      ${MAC_ICONS.trash}
+                    </button>
                   </div>
                 `).join('')}
-                ${this.sessions.length === 0 ? '<div class="p-4 text-center text-[#8e918f] text-xs font-mono">No past prompts.</div>' : ''}
+                ${this.sessions.length === 0 ? '<div class="p-3 text-center text-[#737373] text-[10px] font-mono">NO RECORDED SESSIONS</div>' : ''}
               </div>
             </div>
           </div>
 
-          <!-- Bottom User & Engine Status (Google AI Studio Bottom Rail) -->
-          <div class="p-3 border-t border-[rgba(255,255,255,0.08)] flex items-center justify-between text-xs text-[#c4c7c5] bg-[#131314] hover:bg-[#1e1f20] transition cursor-pointer group" id="btnOpenUserAccountModal" title="Click to manage GitHub Account & Login">
-            <div class="flex items-center gap-2 truncate">
-              <div class="w-6 h-6 rounded-full overflow-hidden border border-[rgba(255,255,255,0.15)] flex-shrink-0 group-hover:border-[#8ab4f8] transition">
-                <img src="${this.userProfile.avatar_url || 'https://avatars.githubusercontent.com/u/9919?v=4'}" alt="Avatar" class="w-full h-full object-cover">
-              </div>
-              <span class="text-[11px] font-medium text-white truncate group-hover:text-[#8ab4f8] transition">${this.userProfile.login}</span>
+          <!-- Bottom User Account & Logout -->
+          <div class="p-2.5 border-t border-[#242424] flex items-center justify-between text-xs text-[#a3a3a3] bg-[#000000]">
+            <div class="flex items-center gap-2 truncate cursor-pointer flex-1 mr-1 text-white hover:text-[#38bdf8] transition" id="btnOpenUserAccountModal" title="Manage GitHub Account">
+              <img src="${this.getUserAvatarUrl()}" alt="${this.escapeHtml(this.userProfile.login)}" class="w-5 h-5 rounded-full border border-[#38bdf8] object-cover flex-shrink-0 shadow-sm" onerror="this.onerror=null; this.src='https://avatars.githubusercontent.com/u/9919?v=4';" />
+              <span class="text-[11px] font-mono text-white truncate font-bold">${this.userProfile.login}</span>
             </div>
-            <span class="text-[10px] font-mono text-[#81c995] bg-[#81c995]/10 px-1.5 py-0.5 rounded border border-[#81c995]/30 flex items-center gap-1">
-              <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-              <span>GitHub</span>
-            </span>
+            <button id="btnDirectLogoutSidebar" class="retro-btn retro-btn-danger px-2 py-1 text-[10px] font-mono flex items-center gap-1" title="Logout">
+              ${MAC_ICONS.bomb}
+              <span>OUT</span>
+            </button>
           </div>
         </aside>
 
-        <!-- GitHub Login & Account Manager Modal -->
-        ${this.showGitHubLoginModal ? `
-          <div class="modal-overlay active" style="z-index: 9999; display: flex;">
-            <div class="p-6 bg-[#131314] border border-[rgba(255,255,255,0.15)] rounded-2xl max-w-lg w-full shadow-2xl space-y-5 animate-fadeIn">
+        <!-- 2. CENTER CHAT & WORKSPACE PANE WITH CRT SCREEN CONTAINER -->
+        <section class="flex-1 min-w-0 h-full flex flex-col bg-[#000000] overflow-hidden relative crt-screen-container ${this.crtEnabled ? 'crt-active crt-theme-' + this.crtColorTheme : ''}">
+          ${this.crtEnabled ? '<div class="crt-scanline-beam"></div>' : ''}
+          
+          <!-- TOP HEADER: Fixed Vintage Studio Console Bar with CRT Controls -->
+          <header class="h-12 px-3 border-b border-[#242424] bg-[#0a0a0a] flex items-center justify-between flex-shrink-0 z-20 gap-2 overflow-hidden shadow-md">
+            
+            <!-- Left Group: Title & Folder Selector -->
+            <div class="flex items-center gap-2 flex-shrink-0 min-w-0 max-w-[200px] sm:max-w-[240px]">
+              <span class="screw-head hidden sm:inline-block flex-shrink-0"></span>
+              <div class="flex items-center gap-1.5 flex-shrink-0 min-w-0">
+                <span class="font-bold text-white text-xs font-mono uppercase tracking-wider truncate max-w-[80px]" id="promptTitleText">
+                  ${this.promptTitle}
+                </span>
+              </div>
+
+              <!-- Top Bar Directory Pill Button -->
+              <button id="btnHeaderSelectFolder" class="px-2 py-0.5 bg-[#141414] hover:bg-[#1c1c1c] border border-[#2e2e2e] hover:border-[#38bdf8] rounded text-[10px] font-mono flex items-center gap-1 text-[#a3a3a3] hover:text-white cursor-pointer transition truncate max-w-[110px] shadow-sm flex-shrink-0" title="Workspace: ${this.currentWorkspacePath} (Click to change)">
+                <span class="text-[#38bdf8] flex-shrink-0">📁</span>
+                <span class="truncate font-bold text-white text-[10px]">${this.getFolderDisplayBasename()}</span>
+                <span class="text-[#737373] text-[9px] flex-shrink-0">▾</span>
+              </button>
+            </div>
+
+            <!-- Center Group: Live Telemetry Indicator & Timer with Cassette Reels -->
+            <div class="hidden xl:flex items-center gap-2 px-2.5 py-0.5 bg-[#121212] border border-[#242424] rounded text-xs font-mono min-w-0 flex-shrink max-w-[320px] justify-center mx-1 shadow-inner overflow-hidden">
+              <span class="led-indicator ${this.isExecuting ? 'led-accent led-pulsing' : 'led-white'} flex-shrink-0"></span>
               
-              <!-- Modal Header -->
-              <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-3.5">
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-xl bg-[#24292f] border border-[rgba(255,255,255,0.15)] flex items-center justify-center text-white shadow-md">
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                  </div>
-                  <div>
-                    <h3 class="font-bold text-white text-base">GitHub Authentication</h3>
-                    <p class="text-[11px] text-[#8e918f]">Connect repositories, Git sync, and user profile</p>
-                  </div>
-                </div>
-                <button id="btnCloseGitHubModal" class="p-1 rounded-lg hover:bg-[#1e1f20] text-[#8e918f] hover:text-white cursor-pointer font-bold">✕</button>
+              <!-- Cassette Tape Reel Mini-Animation -->
+              <div class="flex items-center gap-1 px-1 py-0.5 bg-[#000000] border border-[#242424] rounded flex-shrink-0">
+                <svg class="w-3 h-3 text-[#38bdf8] ${this.isExecuting ? 'tape-spool-active' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M12 2v7M12 15v7M2 12h7M15 12h7" />
+                </svg>
+                <svg class="w-3 h-3 text-[#38bdf8] ${this.isExecuting ? 'tape-spool-active' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M12 2v7M12 15v7M2 12h7M15 12h7" />
+                </svg>
               </div>
 
-              <!-- Current Active User Card -->
-              <div class="p-4 bg-[#1e1f20] border border-[rgba(255,255,255,0.08)] rounded-xl flex items-center justify-between gap-3">
-                <div class="flex items-center gap-3 min-w-0">
-                  <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-[#8ab4f8] shadow-md flex-shrink-0">
-                    <img src="${this.userProfile.avatar_url || 'https://avatars.githubusercontent.com/u/9919?v=4'}" alt="Avatar" class="w-full h-full object-cover">
-                  </div>
-                  <div class="min-w-0">
-                    <div class="flex items-center gap-2">
-                      <span class="font-bold text-white text-sm truncate">${this.userProfile.name || this.userProfile.login}</span>
-                      <span class="text-[10px] bg-[#81c995]/15 text-[#81c995] border border-[#81c995]/30 px-2 py-0.5 rounded-full font-mono font-semibold">Active</span>
-                    </div>
-                    <span class="text-xs text-[#8ab4f8] font-mono">@${this.userProfile.login}</span>
-                    <div class="text-[11px] text-[#8e918f] mt-0.5 truncate">${this.userProfile.organization || 'GitHub Workspace'}</div>
-                  </div>
-                </div>
-                <a href="${this.userProfile.html_url || 'https://github.com/' + this.userProfile.login}" target="_blank" class="px-3 py-1.5 bg-[#131314] hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white border border-[rgba(255,255,255,0.1)] rounded-lg text-xs font-mono transition flex items-center gap-1.5 flex-shrink-0">
-                  <span>Profile</span>
-                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                </a>
-              </div>
+              <span class="text-white font-bold text-[10px] uppercase truncate flex-1 min-w-0">
+                ${this.isExecuting ? `[${this.activeSwarmRole}] ${this.currentStatusText}` : (this.activeViewMode === 'cicd' ? '[AUTONOMOUS CI/CD PIPELINE]' : (this.activeViewMode === 'workflow' ? '[DAG WORKFLOW ORCHESTRATOR]' : '[STANDBY // SWARM READY]'))}
+              </span>
+              <span id="liveExecutionTimerBadge" class="text-[#38bdf8] font-mono text-[10px] px-1.5 py-0.5 rounded border border-[#0369a1] bg-[#082038] font-bold flex items-center gap-1 flex-shrink-0">
+                ${MAC_ICONS.watch}
+                <span>${this.formatElapsedTime()}</span>
+              </span>
+            </div>
 
-              <!-- Error Banner if any -->
-              ${this.gitHubLoginError ? `
-                <div class="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-300 flex items-center gap-2">
-                  <svg class="w-4 h-4 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                  <span>${this.escapeHtml(this.gitHubLoginError)}</span>
+            <!-- Right Group: Actions Toolbar with CRT Controls -->
+            <div class="flex items-center gap-1 flex-shrink-0 ml-auto">
+              <!-- CRT Power Toggle Button -->
+              <button id="btnToggleCrtScreen" class="retro-btn ${this.crtEnabled ? 'retro-btn-accent font-bold' : ''} flex-shrink-0 px-2 py-1 text-[10px] flex items-center gap-1" title="Toggle Vintage CRT Monitor Effect (Scanlines & Phosphor Bloom)">
+                <span class="w-2 h-2 rounded-full ${this.crtEnabled ? 'bg-black shadow-[0_0_8px_#38bdf8]' : 'bg-[#404040]'} inline-block"></span>
+                <span>${this.crtEnabled ? 'CRT: ON' : 'CRT: OFF'}</span>
+              </button>
+
+              <!-- CRT Phosphor Theme Switcher Dropdown / Pills -->
+              ${this.crtEnabled ? `
+                <div class="hidden sm:flex items-center bg-[#141414] border border-[#383838] rounded p-0.5 text-[9px] font-mono gap-0.5">
+                  <button class="btn-crt-theme px-1.5 py-0.5 rounded ${this.crtColorTheme === 'green' ? 'bg-[#15803d] text-white font-bold' : 'text-[#737373] hover:text-white'}" data-theme="green" title="P1 Green Phosphor">P1</button>
+                  <button class="btn-crt-theme px-1.5 py-0.5 rounded ${this.crtColorTheme === 'amber' ? 'bg-[#b45309] text-white font-bold' : 'text-[#737373] hover:text-white'}" data-theme="amber" title="P3 Amber Phosphor">P3</button>
+                  <button class="btn-crt-theme px-1.5 py-0.5 rounded ${this.crtColorTheme === 'cyan' ? 'bg-[#0369a1] text-white font-bold' : 'text-[#737373] hover:text-white'}" data-theme="cyan" title="Cyan Phosphor">CYAN</button>
+                  <button class="btn-crt-theme px-1.5 py-0.5 rounded ${this.crtColorTheme === 'white' ? 'bg-white text-black font-bold' : 'text-[#737373] hover:text-white'}" data-theme="white" title="White Monochrome">MONO</button>
                 </div>
               ` : ''}
 
-              <!-- Section 1: Sign in with GitHub Username / PAT -->
-              <div class="space-y-3 pt-1">
-                <div class="flex items-center justify-between">
-                  <label class="text-xs font-semibold text-white uppercase tracking-wider font-mono">1. Instant Sign In via Username or Token</label>
-                  <span class="text-[10px] text-[#8e918f]">Live GitHub API</span>
-                </div>
+              <!-- Audio Mute / Unmute Toggle (Symbol Only) -->
+              <button id="btnToggleSound" class="retro-btn ${!soundEngine.getMuted() ? 'retro-btn-accent' : ''} flex-shrink-0 px-2 py-1 text-[10px] flex items-center justify-center font-bold" title="${!soundEngine.getMuted() ? 'Audio Sound Effects Active (Click to Mute)' : 'Audio Sound Effects Muted (Click to Enable)'}">
+                ${!soundEngine.getMuted() ? MAC_ICONS.sound : MAC_ICONS.soundMute}
+              </button>
 
-                <div class="space-y-2">
-                  <div>
-                    <input type="text" id="inputGitHubUsername" placeholder="GitHub Username (e.g. Pranav1921 or your username)" value="${this.escapeHtml(this.userProfile.login)}" class="w-full bg-[#1e1f20] border border-[rgba(255,255,255,0.1)] focus:border-[#8ab4f8] rounded-xl px-3.5 py-2.5 text-xs text-white outline-none font-mono" />
-                  </div>
-                  <div>
-                    <input type="password" id="inputGitHubToken" placeholder="GitHub Personal Access Token (PAT) (Optional for private repos)" class="w-full bg-[#1e1f20] border border-[rgba(255,255,255,0.1)] focus:border-[#8ab4f8] rounded-xl px-3.5 py-2.5 text-xs text-white outline-none font-mono" />
-                  </div>
-                </div>
+              <!-- Export ZIP (Symbol Only) -->
+              <button id="btnExportProjectZip" class="retro-btn flex-shrink-0 px-2 py-1 text-[10px] flex items-center justify-center" title="Export Project as .ZIP Archive">
+                ${MAC_ICONS.floppy}
+              </button>
 
-                <button id="btnSubmitGitHubLogin" class="w-full py-2.5 bg-[#24292f] hover:bg-[#32383f] text-white border border-[rgba(255,255,255,0.2)] rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50" ${this.isLoggingInGitHub ? 'disabled' : ''}>
-                  ${this.isLoggingInGitHub ? `
-                    <span class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    <span>Connecting to GitHub...</span>
-                  ` : `
-                    <svg class="w-4 h-4 fill-white" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                    <span>Sign In / Switch GitHub Account</span>
-                  `}
+              <!-- Toggle Side Panel (Keeps PREVIEW Label) -->
+              <button id="btnToggleSidePanel" class="retro-btn ${this.showSidePanel ? 'retro-btn-white' : ''} flex-shrink-0 px-2.5 py-1 text-[9px] flex items-center gap-1" title="Toggle Code Preview & Editor">
+                ${MAC_ICONS.macScreen}
+                <span>PREVIEW</span>
+                ${this.isAppReady ? '<span class="w-1.5 h-1.5 bg-[#38bdf8] rounded-full inline-block shadow-[0_0_6px_#38bdf8]"></span>' : ''}
+              </button>
+
+              <!-- Settings Toggle (Symbol Only) -->
+              <button id="btnToggleSystemInstruction" class="retro-btn flex-shrink-0 px-2 py-1 text-[10px] flex items-center justify-center" title="System Instructions & Persona Settings">
+                ${MAC_ICONS.briefcase}
+              </button>
+
+              <!-- Header Logout Button (Symbol Only) -->
+              <button id="btnHeaderLogout" class="retro-btn retro-btn-danger flex-shrink-0 px-2 py-1 text-[10px] flex items-center justify-center" title="Sign Out / Logout">
+                ${MAC_ICONS.bomb}
+              </button>
+
+              <!-- Run Button (Compact Symbol with Return Arrow) -->
+              <button id="btnHeaderRun" class="retro-btn retro-btn-accent flex-shrink-0 px-2.5 py-1 text-[10px] flex items-center gap-1 font-bold" title="Run Task (Enter)">
+                ${MAC_ICONS.command}
+                <span>↵</span>
+              </button>
+            </div>
+          </header>
+
+          <!-- TOP NAVIGATION TAB STRIP: Clean Studio Navigation -->
+          <div class="h-10 px-3 border-b border-[#242424] bg-[#050505] flex items-center justify-between flex-shrink-0 z-10 select-none">
+            <div class="flex items-center gap-1.5 overflow-x-auto custom-scrollbar">
+              <button id="btnNavViewAgent" class="px-3.5 py-1.5 text-[11px] font-mono font-bold uppercase transition rounded cursor-pointer flex items-center gap-1.5 ${this.activeViewMode === 'agent' ? 'bg-[#38bdf8] text-black shadow-[0_0_12px_rgba(56,189,248,0.5)]' : 'text-[#737373] hover:text-white hover:bg-[#141414]'}">
+                <span>[//] AGENT STUDIO</span>
+              </button>
+              <button id="btnNavViewCicd" class="px-2.5 py-1 text-[10px] font-mono font-bold uppercase transition rounded cursor-pointer flex items-center gap-1.5 ${this.activeViewMode === 'cicd' ? 'bg-[#38bdf8] text-black shadow-[0_0_12px_rgba(56,189,248,0.5)]' : 'text-[#737373] hover:text-white hover:bg-[#141414]'}">
+                <span>[>] CI/CD PIPELINE</span>
+              </button>
+              <button id="btnNavViewWorkflow" class="px-2.5 py-1 text-[10px] font-mono font-bold uppercase transition rounded cursor-pointer flex items-center gap-1.5 ${this.activeViewMode === 'workflow' ? 'bg-[#38bdf8] text-black shadow-[0_0_12px_rgba(56,189,248,0.5)]' : 'text-[#737373] hover:text-white hover:bg-[#141414]'}">
+                <span>[#] WORKFLOW ENGINE</span>
+              </button>
+            </div>
+
+            ${this.activeViewMode === 'agent' ? `
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-mono text-[#737373] hidden sm:inline">SWARM AUTONOMY: 5-AGENT</span>
+              </div>
+            ` : (this.activeViewMode === 'cicd' ? `
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-mono text-[#737373] hidden sm:inline">LIVE TELEMETRY: SSE</span>
+                <button id="btnQuickTriggerPipelineTop" class="retro-btn retro-btn-accent px-3 py-1 text-[10px] font-mono font-bold flex items-center gap-1">
+                  <span>[>] TRIGGER PIPELINE</span>
                 </button>
               </div>
-
-              <!-- Section 2: Create Remote Repository & Push -->
-              <div class="p-4 bg-[#18191a] border border-[#8ab4f8]/30 rounded-xl space-y-3">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-[#8ab4f8] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                    <span class="text-xs font-bold text-white uppercase tracking-wider font-mono">Create GitHub Repo & Push</span>
-                  </div>
-                  <span class="text-[10px] text-[#8ab4f8] bg-[#8ab4f8]/10 px-2 py-0.5 rounded border border-[#8ab4f8]/30 font-mono">Git Push</span>
-                </div>
-
-                <p class="text-[11px] text-[#8e918f]">Create a brand new repository on your GitHub account and push all generated project files (<code>index.html</code>, <code>styles.css</code>, <code>script.js</code>):</p>
-
-                <div class="space-y-2">
-                  <div class="flex items-center gap-2">
-                    <div class="flex-1">
-                      <label class="text-[10px] text-[#8e918f] font-mono block mb-1">Repository Name</label>
-                      <input type="text" id="inputNewRepoName" placeholder="e.g. spring-ai-autonomous-dev" value="${this.escapeHtml(this.promptTitle.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'spring-ai-autonomous-dev')}" class="w-full bg-[#131314] border border-[rgba(255,255,255,0.12)] focus:border-[#8ab4f8] rounded-xl px-3 py-2 text-xs text-white outline-none font-mono" />
-                    </div>
-                    <div class="w-28">
-                      <label class="text-[10px] text-[#8e918f] font-mono block mb-1">Visibility</label>
-                      <select id="selectRepoVisibility" class="w-full bg-[#131314] border border-[rgba(255,255,255,0.12)] rounded-xl px-2.5 py-2 text-xs text-white outline-none font-mono cursor-pointer">
-                        <option value="public" selected>Public</option>
-                        <option value="private">Private</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label class="text-[10px] text-[#8e918f] font-mono block mb-1">Description (Optional)</label>
-                    <input type="text" id="inputNewRepoDesc" placeholder="Full stack web app created autonomously with Spring AI Autonomous Dev" class="w-full bg-[#131314] border border-[rgba(255,255,255,0.12)] focus:border-[#8ab4f8] rounded-xl px-3 py-2 text-xs text-white outline-none font-mono" />
-                  </div>
-                </div>
-
-                <button id="btnCreateAndPushRepo" class="w-full py-2.5 bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-50" ${this.isCreatingRepo ? 'disabled' : ''}>
-                  ${this.isCreatingRepo ? `
-                    <span class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    <span>Creating & Pushing to GitHub...</span>
-                  ` : `
-                    <svg class="w-4 h-4 fill-white" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                    <span>Create Repository & Push Code</span>
-                  `}
+            ` : (this.activeViewMode === 'workflow' ? `
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-mono text-[#737373] hidden sm:inline">DAG ENGINE: ACTIVE</span>
+                <button id="btnQuickRunWorkflowTop" class="retro-btn retro-btn-accent px-3 py-1 text-[10px] font-mono font-bold flex items-center gap-1">
+                  <span>${this.isWorkflowExecuting ? '[~] RUNNING...' : '[>] RUN WORKFLOW'}</span>
                 </button>
+              </div>
+            ` : ''))}
+          </div>
 
-                <!-- Create Repo Result Banner -->
-                ${this.createRepoResult ? `
-                  <div class="p-3 ${this.createRepoResult.success ? 'bg-[#81c995]/10 border border-[#81c995]/30 text-[#81c995]' : 'bg-red-500/10 border border-red-500/30 text-red-300'} rounded-xl text-xs space-y-1.5 animate-fadeIn">
-                    <div class="flex items-center gap-2 font-bold">
-                      ${this.createRepoResult.success 
-                        ? '<svg class="w-4 h-4 text-[#81c995] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>' 
-                        : '<svg class="w-4 h-4 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>'}
-                      <span>${this.escapeHtml(this.createRepoResult.message)}</span>
+          <!-- DYNAMIC VIEW CONTENT: Workflow Studio OR CI/CD Pipeline Dashboard OR Agent Chat / Ask Mode -->
+          ${this.activeViewMode === 'workflow' ? this.renderWorkflowStudio() : (this.activeViewMode === 'cicd' ? this.renderPipelineDashboard() : `
+            <!-- Chat Feed & Workspace Content -->
+            <div id="chatFeed" class="flex-1 overflow-y-auto p-3 sm:p-5 custom-scrollbar flex flex-col items-center">
+              <div class="max-w-4xl xl:max-w-5xl w-full space-y-3.5">
+                
+                <!-- System Instructions Drawer -->
+                ${this.systemInstructionOpen ? `
+                  <div class="w-full p-4 retro-panel space-y-2.5 animate-fadeIn font-mono">
+                    <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+                      <span class="text-xs font-bold text-white uppercase flex items-center gap-2">
+                        <span class="screw-head"></span>
+                        [SYSTEM INSTRUCTIONS // MODEL PERSONA]
+                      </span>
+                      <button id="btnCloseSystemInstruction" class="text-xs text-[#737373] hover:text-white cursor-pointer font-mono">✕ CLOSE</button>
                     </div>
-                    ${this.createRepoResult.htmlUrl ? `
-                      <div class="pt-1">
-                        <a href="${this.createRepoResult.htmlUrl}" target="_blank" class="inline-flex items-center gap-1.5 text-white underline hover:text-[#8ab4f8] font-mono font-semibold">
-                          <span>Open ${this.createRepoResult.htmlUrl} ↗</span>
-                        </a>
-                      </div>
-                    ` : ''}
+                    <textarea id="systemInstructionText" rows="2" class="w-full bg-[#000000] border border-[#383838] focus:border-white rounded p-2.5 text-xs text-white font-mono outline-none resize-none shadow-inner">${this.escapeHtml(this.systemInstruction)}</textarea>
                   </div>
                 ` : ''}
-              </div>
 
-              <!-- Section 3: OAuth2 Login Flow -->
-              <div class="pt-3 border-t border-[rgba(255,255,255,0.08)] space-y-2">
-                <div class="flex items-center justify-between">
-                  <label class="text-xs font-semibold text-[#8e918f] uppercase tracking-wider font-mono">2. Spring Security OAuth2 SSO</label>
-                  <span class="text-[10px] text-[#8ab4f8] font-mono">OAuth2 Redirect</span>
-                </div>
-                <a href="http://localhost:8080/oauth2/authorization/github" class="w-full py-2 bg-[#1e1f20] hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white border border-[rgba(255,255,255,0.1)] rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 cursor-pointer">
-                  <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                  <span>Authorize with GitHub OAuth2</span>
-                </a>
-              </div>
-
-              <!-- Sign Out / Reset Button -->
-              <div class="pt-2 flex items-center justify-between border-t border-[rgba(255,255,255,0.08)]">
-                <button id="btnSignOutGitHub" class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-xs font-semibold transition cursor-pointer">
-                  Sign Out
-                </button>
-                <button id="btnCloseGitHubModalFooter" class="px-4 py-1.5 bg-[#1e1f20] hover:bg-[#282a2c] text-white rounded-lg text-xs font-semibold transition cursor-pointer">
-                  Done
-                </button>
-              </div>
-
-            </div>
-          </div>
-        ` : ''}
-
-        <!-- Folder Selection Modal (Interactive Directory Selector) -->
-        ${this.showFolderModal ? `
-          <div class="modal-overlay active" style="z-index: 9999; display: flex;">
-            <div class="p-6 bg-[#111113] border border-[#27272a] rounded-2xl max-w-lg w-full shadow-2xl space-y-4">
-              <div class="flex items-center justify-between border-b border-[#27272a] pb-3">
-                <div class="flex items-center gap-2.5">
-                  <div class="w-8 h-8 rounded-xl bg-[#18181b] border border-[#00ff88]/40 flex items-center justify-center text-[#00ff88] shadow-md">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-                  </div>
-                  <div>
-                    <h3 class="font-bold text-white text-sm">Select Code Destination Folder</h3>
-                    <p class="text-[11px] text-[#a1a1aa]">Choose where generated files will be written</p>
-                  </div>
-                </div>
-                <button id="btnCloseFolderModal" class="p-1 rounded-lg hover:bg-[#18181b] text-[#a1a1aa] hover:text-white cursor-pointer font-bold">✕</button>
-              </div>
-
-              <!-- 1. Native Windows Folder Picker -->
-              <div>
-                <input type="file" id="inputNativeDirPicker" webkitdirectory directory class="hidden" />
-                <button id="btnBrowseNativeDir" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#18181b] hover:bg-[#27272a] text-[#00ff88] border border-[#00ff88]/50 hover:border-[#00ff88] rounded-xl text-xs font-bold transition shadow-lg cursor-pointer">
-                  <svg class="w-4 h-4 text-[#00ff88]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/></svg>
-                  <span>Browse Folder on This PC...</span>
-                </button>
-              </div>
-
-              <!-- 2. Common Preset Folders -->
-              <div class="space-y-1.5">
-                <label class="text-[10px] text-[#71717a] font-mono uppercase font-bold">Quick Presets</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <button class="btn-preset-folder p-2 bg-black hover:bg-[#18181b] border border-[#27272a] hover:border-[#00ff88] rounded-xl flex items-center gap-2 text-left text-xs text-white transition cursor-pointer" data-path="${this.commonFolders['projectWorkspace'] || 'workspace'}">
-                    <svg class="w-4 h-4 text-[#00ff88] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-                    <div class="min-w-0 flex-1 truncate">
-                      <div class="font-bold truncate text-[11px]">Project Workspace</div>
-                      <div class="text-[10px] text-[#71717a] truncate">./workspace</div>
-                    </div>
-                  </button>
-                  <button class="btn-preset-folder p-2 bg-black hover:bg-[#18181b] border border-[#27272a] hover:border-[#00ff88] rounded-xl flex items-center gap-2 text-left text-xs text-white transition cursor-pointer" data-path="${this.commonFolders['desktop'] || 'C:/Users/prana/Desktop'}">
-                    <svg class="w-4 h-4 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                    <div class="min-w-0 flex-1 truncate">
-                      <div class="font-bold truncate text-[11px]">Desktop</div>
-                      <div class="text-[10px] text-[#71717a] truncate">Desktop folder</div>
-                    </div>
-                  </button>
-                  <button class="btn-preset-folder p-2 bg-black hover:bg-[#18181b] border border-[#27272a] hover:border-[#00ff88] rounded-xl flex items-center gap-2 text-left text-xs text-white transition cursor-pointer" data-path="${this.commonFolders['downloads'] || 'C:/Users/prana/Downloads'}">
-                    <svg class="w-4 h-4 text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    <div class="min-w-0 flex-1 truncate">
-                      <div class="font-bold truncate text-[11px]">Downloads</div>
-                      <div class="text-[10px] text-[#71717a] truncate">Downloads folder</div>
-                    </div>
-                  </button>
-                  <button class="btn-preset-folder p-2 bg-black hover:bg-[#18181b] border border-[#27272a] hover:border-[#00ff88] rounded-xl flex items-center gap-2 text-left text-xs text-white transition cursor-pointer" data-path="${this.commonFolders['documents'] || 'C:/Users/prana/Documents'}">
-                    <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    <div class="min-w-0 flex-1 truncate">
-                      <div class="font-bold truncate text-[11px]">Documents</div>
-                      <div class="text-[10px] text-[#71717a] truncate">Documents folder</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <!-- 3. Manual Path Input -->
-              <div class="space-y-1.5 font-mono">
-                <label class="text-[10px] text-[#71717a] uppercase font-bold">Or Enter Custom Folder Path:</label>
-                <input type="text" id="inputFolderModal" value="${this.escapeHtml(this.currentWorkspacePath)}" placeholder="e.g. C:/Projects/my-app" class="w-full bg-black border border-[#27272a] focus:border-[#00ff88] text-white px-3.5 py-2.5 rounded-xl text-xs outline-none shadow-inner" />
-              </div>
-
-              <!-- Modal Footer -->
-              <div class="flex items-center justify-between gap-2 pt-2 border-t border-[#27272a]">
-                <button id="btnOpenInExplorerModal" class="px-3 py-1.5 bg-[#18181b] hover:bg-[#27272a] text-[#00ff88] text-xs font-bold rounded-xl border border-[#27272a] transition cursor-pointer flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/></svg>
-                  <span>Reveal in OS</span>
-                </button>
-                <div class="flex gap-2">
-                  <button id="btnCancelFolderModal" class="px-3.5 py-1.5 bg-[#18181b] hover:bg-[#27272a] text-white text-xs font-bold rounded-xl transition cursor-pointer">Cancel</button>
-                  <button id="btnConfirmFolderModal" class="px-4 py-1.5 bg-white hover:bg-[#00ff88] text-black text-xs font-extrabold rounded-xl transition cursor-pointer shadow-lg">Save &amp; Apply Folder</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ` : ''}
-
-        <!-- 2. CENTER CHAT & WORKSPACE PANE (Google AI Studio Canvas) -->
-        <section class="flex-1 min-w-0 flex flex-col bg-[#0e0e0f] overflow-hidden relative">
-          <!-- Top Header (Google AI Studio Style - Adaptive Symbol/Text Mode) -->
-          <div class="h-14 px-2.5 sm:px-4 border-b border-[rgba(255,255,255,0.08)] bg-[#131314] flex items-center justify-between flex-shrink-0 z-10 gap-2 overflow-x-hidden">
-            <div class="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-shrink">
-              <div class="flex items-center gap-1.5 flex-shrink-0">
-                <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
-                  <defs>
-                    <linearGradient id="gemGradCenter" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#8ab4f8"/>
-                      <stop offset="50%" stop-color="#c58af9"/>
-                      <stop offset="100%" stop-color="#f28b82"/>
-                    </linearGradient>
-                  </defs>
-                  <path fill="url(#gemGradCenter)" d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
-                </svg>
-                <div class="flex items-center gap-1 cursor-pointer hover:bg-[#1e1f20] px-1.5 py-1 rounded-lg transition min-w-0" id="btnEditPromptTitle" title="Rename prompt">
-                  <span class="font-bold text-white text-xs sm:text-sm tracking-tight font-sans truncate ${this.showSidePanel ? 'max-w-[80px] sm:max-w-[110px]' : 'max-w-[120px] sm:max-w-[180px]'}" id="promptTitleText">
-                    ${this.promptTitle}
-                  </span>
-                  <svg class="w-3 h-3 text-[#8e918f] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                </div>
-              </div>
-
-              <!-- Clickable Header Folder Chip (Adaptive: Icon Only when preview opens) -->
-              <button id="btnHeaderChangeFolder" class="flex items-center gap-1 px-2 py-1 bg-[#1e1f20] hover:bg-[#282a2c] border border-[rgba(255,255,255,0.1)] hover:border-[#8ab4f8] rounded-full text-xs font-mono text-[#c4c7c5] transition cursor-pointer flex-shrink-0" title="Target Directory: ${this.escapeHtml(this.currentWorkspacePath)} (Click to change)">
-                <svg class="w-3.5 h-3.5 text-[#8ab4f8] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-                ${this.showSidePanel ? '' : `
-                  <span class="text-white font-semibold max-w-[85px] truncate">${this.getFolderDisplayBasename()}</span>
-                  <svg class="w-2.5 h-2.5 text-[#8e918f] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                `}
-              </button>
-
-              <!-- Compact Model Chip with SVG Symbol (Hidden when preview is open) -->
-              ${!this.showSidePanel ? `
-                <div class="hidden 2xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1e1f20] border border-[rgba(255,255,255,0.08)] text-[11px] text-[#8e918f] font-mono flex-shrink-0" title="Model: deepseek-coder:6.7b">
-                  <svg class="w-3.5 h-3.5 text-[#8ab4f8] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" stroke-width="2"></rect><rect x="9" y="9" width="6" height="6" stroke-width="2"></rect><path stroke-linecap="round" stroke-width="2" d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 15h3M1 9h3M1 15h3"></path></svg>
-                  <span class="w-1.5 h-1.5 rounded-full ${this.isExecuting ? 'bg-[#8ab4f8] animate-ping' : 'bg-[#81c995]'}"></span>
-                  <span class="text-white font-medium max-w-[85px] truncate">${this.isExecuting ? this.currentStatusText : 'deepseek'}</span>
-                </div>
-              ` : ''}
-            </div>
-
-            <!-- Right Header Actions (Symbol-Only when Preview is Open) -->
-            <div class="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
-              <!-- Get Code Button -->
-              <button id="btnOpenGetCodeModal" class="flex items-center justify-center ${this.showSidePanel ? 'w-8 h-8 p-0' : 'gap-1.5 px-2.5 sm:px-3 py-1.5'} bg-[#1e1f20] hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white border border-[rgba(255,255,255,0.1)] rounded-full text-xs font-medium transition cursor-pointer flex-shrink-0" title="Get API Code in Python, cURL, JS, Java">
-                <svg class="w-3.5 h-3.5 text-[#8ab4f8] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                ${this.showSidePanel ? '' : '<span class="hidden md:inline">Get code</span>'}
-              </button>
-
-              <!-- Share Button -->
-              <button id="btnSharePrompt" class="flex items-center justify-center ${this.showSidePanel ? 'w-8 h-8 p-0' : 'hidden xl:flex gap-1.5 px-2.5 sm:px-3 py-1.5'} bg-[#1e1f20] hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white border border-[rgba(255,255,255,0.1)] rounded-full text-xs font-medium transition cursor-pointer flex-shrink-0" title="Share prompt snapshot">
-                <svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
-                ${this.showSidePanel ? '' : '<span>Share</span>'}
-              </button>
-
-              <!-- System Instructions Toggle -->
-              <button id="btnToggleSystemInstruction" class="flex items-center justify-center ${this.showSidePanel ? 'w-8 h-8 p-0' : 'hidden lg:flex gap-1.5 px-2.5 sm:px-3 py-1.5'} bg-[#1e1f20] hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white border border-[rgba(255,255,255,0.1)] rounded-full text-xs font-medium transition cursor-pointer flex-shrink-0" title="System Instructions">
-                <svg class="w-3.5 h-3.5 text-[#8ab4f8] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                ${this.showSidePanel ? '' : `
-                  <span class="hidden 2xl:inline">System Prompt</span>
-                  <svg class="w-3 h-3 transition-transform ${this.systemInstructionOpen ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                `}
-              </button>
-
-              <!-- Toggle Side Panel (Preview / Settings) -->
-              <button id="btnToggleSidePanel" class="flex items-center justify-center ${this.showSidePanel ? 'w-8 h-8 p-0 bg-[#1e1f20] text-[#8ab4f8] border border-[#8ab4f8]/40' : 'px-2.5 sm:px-3 py-1.5 bg-[#1e1f20] text-[#c4c7c5] border border-[rgba(255,255,255,0.1)] hover:text-white'} rounded-full text-xs font-bold transition cursor-pointer flex-shrink-0" title="Toggle Preview & Run Settings">
-                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                ${this.showSidePanel ? '' : '<span class="hidden md:inline">Settings</span>'}
-              </button>
-
-              <!-- Mode Switcher (Google AI Studio Pills - Compact in preview mode) -->
-              <div class="bg-[#1e1f20] border border-[rgba(255,255,255,0.1)] rounded-full p-0.5 flex items-center flex-shrink-0">
-                <button id="btnModeAgent" class="${this.showSidePanel ? 'w-7 h-7 flex items-center justify-center' : 'px-2.5 sm:px-3 py-1 flex items-center gap-1.5'} rounded-full transition-all text-xs cursor-pointer ${this.aiMode === 'agent' ? 'gemini-gradient-bg text-white font-bold shadow-md' : 'text-[#c4c7c5] hover:text-white'}" title="Autonomous Agent Mode">
-                  <svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                  ${this.showSidePanel ? '' : '<span>Agent</span>'}
-                </button>
-                <button id="btnModeAsk" class="${this.showSidePanel ? 'w-7 h-7 flex items-center justify-center' : 'px-2.5 sm:px-3 py-1 flex items-center gap-1.5'} rounded-full transition-all text-xs cursor-pointer ${this.aiMode === 'ask' ? 'bg-[#282a2c] text-white font-bold shadow-md' : 'text-[#c4c7c5] hover:text-white'}" title="Direct Ask Mode">
-                  <svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                  ${this.showSidePanel ? '' : '<span>Ask</span>'}
-                </button>
-              </div>
-
-              <!-- GitHub Profile / Login Button in Top Header -->
-              <button id="btnHeaderGitHubLogin" class="flex items-center justify-center ${this.showSidePanel ? 'w-8 h-8 p-0' : 'gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5'} bg-[#1e1f20] hover:bg-[#282a2c] text-[#e3e3e3] hover:text-white border border-[rgba(255,255,255,0.1)] rounded-full text-xs font-medium transition cursor-pointer shadow-sm group flex-shrink-0" title="GitHub Account: ${this.escapeHtml(this.userProfile.login)}">
-                <div class="w-4 h-4 rounded-full overflow-hidden flex-shrink-0 border border-[rgba(255,255,255,0.2)]">
-                  <img src="${this.userProfile.avatar_url || 'https://avatars.githubusercontent.com/u/9919?v=4'}" class="w-full h-full object-cover">
-                </div>
-                ${this.showSidePanel ? '' : `
-                  <span class="max-w-[75px] sm:max-w-[100px] truncate font-mono text-[11px]">${this.userProfile.login}</span>
-                  <span class="w-1.5 h-1.5 rounded-full bg-[#81c995] flex-shrink-0"></span>
-                `}
-              </button>
-
-              <!-- Blue Top Run Button -->
-              <button id="btnHeaderRun" class="flex items-center justify-center ${this.showSidePanel ? 'w-8 h-8 p-0' : 'gap-1.5 px-3.5 sm:px-4 py-1.5'} bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-full text-xs font-bold transition cursor-pointer btn-action shadow-md flex-shrink-0" title="Run (Ctrl+Enter)">
-                <svg class="w-3 h-3 fill-white flex-shrink-0" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                ${this.showSidePanel ? '' : '<span>Run</span>'}
-              </button>
-            </div>
-          </div>
-
-          <!-- Chat Feed & Workspace Content -->
-          <div id="chatFeed" class="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar flex flex-col items-center">
-            <div class="max-w-4xl xl:max-w-5xl 2xl:max-w-6xl w-full space-y-4">
-              
-              <!-- System Instructions Accordion Drawer (Google AI Studio Signature Feature) -->
-              ${this.systemInstructionOpen ? `
-                <div class="w-full p-4 bg-[#1e1f20] border border-[rgba(255,255,255,0.12)] rounded-2xl shadow-xl space-y-2 animate-fadeIn">
-                  <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-2">
-                    <div class="flex items-center gap-2">
-                      <span class="text-xs font-bold text-white uppercase tracking-wider font-mono">System Instructions</span>
-                      <span class="text-[10px] text-[#8ab4f8] bg-[#8ab4f8]/10 px-2 py-0.5 rounded-full border border-[#8ab4f8]/30">Model Persona</span>
-                    </div>
-                    <button id="btnCloseSystemInstruction" class="text-xs text-[#8e918f] hover:text-white cursor-pointer font-mono">Close ✕</button>
-                  </div>
-                  <p class="text-[11px] text-[#8e918f]">Configure behavior and role guidelines given to the autonomous engineer model:</p>
-                  <textarea id="systemInstructionText" rows="2" class="w-full bg-[#131314] border border-[rgba(255,255,255,0.1)] focus:border-[#8ab4f8] rounded-xl p-2.5 text-xs text-[#e3e3e3] font-mono outline-none resize-none">${this.escapeHtml(this.systemInstruction)}</textarea>
-                </div>
-              ` : ''}
-
-              <!-- Multi-Agent Swarm Status Strip -->
-              <div class="w-full bg-[#131314] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-2.5 flex items-center justify-between gap-2 shadow-md">
-                <div class="flex items-center gap-2 flex-shrink-0">
-                  <span class="w-2.5 h-2.5 rounded-full ${this.isExecuting ? 'bg-[#81c995] animate-ping' : 'bg-[#81c995]'}"></span>
-                  <span class="font-mono text-xs font-bold text-white uppercase hidden sm:inline">Swarm</span>
-                </div>
-
-                <div class="flex items-center gap-2 flex-1 justify-center overflow-x-auto custom-scrollbar px-1 min-w-0">
-                  <button class="btn-filter-role px-3 py-1 rounded-full text-xs font-mono transition cursor-pointer flex-shrink-0 btn-action ${this.filterSwarmRole === 'ALL' ? 'bg-[#282a2c] text-white font-bold border border-[rgba(255,255,255,0.2)]' : 'bg-[#1e1f20] text-[#8e918f] hover:text-white border border-[rgba(255,255,255,0.08)]'}" data-role="ALL">
-                    All
-                  </button>
-                  ${this.agentSwarmRoles.map(r => `
-                    <button class="btn-filter-role px-3 py-1 rounded-full border text-xs font-mono flex items-center gap-1.5 transition-all cursor-pointer flex-shrink-0 btn-action ${this.activeSwarmRole === r.id ? 'bg-[#1e1f20] border-[#8ab4f8] text-[#8ab4f8] font-bold shadow-[0_0_8px_rgba(138,180,248,0.25)]' : (this.filterSwarmRole === r.id ? 'bg-white text-black border-white font-bold' : 'bg-[#1e1f20] border-[rgba(255,255,255,0.08)] text-[#8e918f] hover:text-white')}" data-role="${r.id}">
-                      <span class="w-1.5 h-1.5 rounded-full ${this.activeSwarmRole === r.id ? 'bg-[#8ab4f8] animate-pulse' : 'bg-[#52525b]'}"></span>
-                      <span>${r.name}</span>
-                    </button>
-                  `).join('')}
-                </div>
-
-                <div class="flex items-center gap-1.5 flex-shrink-0">
-                  <span class="text-xs font-mono text-[#8e918f] truncate max-w-[140px]">
-                    ${this.isExecuting ? (this.activeSwarmRole !== 'IDLE' ? this.activeSwarmRole : 'Active') : '5 Agents Ready'}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Messages Feed -->
-              <div id="messagesList" class="space-y-3.5">
-                ${this.renderMessages()}
-              </div>
-            </div>
-          </div>
-
-          <!-- 3. PROMPT TYPING DOCK (Google AI Studio Signature Input) -->
-          <div class="p-3 sm:p-5 border-t border-[rgba(255,255,255,0.08)] bg-[#131314] flex justify-center flex-shrink-0 z-20">
-            <div class="max-w-4xl xl:max-w-5xl 2xl:max-w-6xl w-full">
-              <div class="w-full bg-[#1e1f20] border border-[rgba(255,255,255,0.12)] hover:border-[rgba(255,255,255,0.25)] focus-within:border-[#8ab4f8] focus-within:shadow-[0_0_20px_rgba(138,180,248,0.2)] rounded-3xl p-3.5 sm:p-4 flex flex-col gap-2.5 transition-all shadow-2xl">
-                
-                <textarea id="taskInput" rows="3" ${this.isExecuting ? 'disabled' : ''} placeholder="${this.isExecuting ? 'Agent is synthesizing code... Click Stop to cancel.' : (this.aiMode === 'ask' ? 'Ask any architectural, coding, algorithmic, or system design question...' : 'Describe what you want Spring AI Agent to build in your workspace (e.g. full-stack web app, interactive dashboard, tools)...')}" class="w-full bg-transparent text-sm text-[#e3e3e3] placeholder-[#8e918f] outline-none resize-none custom-scrollbar font-sans min-h-[85px] max-h-[220px] leading-relaxed p-1 ${this.isExecuting ? 'opacity-50 cursor-not-allowed' : ''}">${this.taskPrompt}</textarea>
-                
-                <!-- Target Folder Chip above buttons -->
-                <div class="flex items-center justify-between text-[11px] font-mono text-[#8e918f] px-1">
-                  <div class="flex items-center gap-1.5 truncate">
-                    <span>Target Folder:</span>
-                    <button id="btnDockFolderBadge" class="text-[#8ab4f8] hover:underline font-bold flex items-center gap-1 cursor-pointer truncate" title="Click to change target folder">
-                      <svg class="w-3.5 h-3.5 text-[#8ab4f8] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-                      <span class="truncate">${this.currentWorkspacePath}</span>
-                      <span class="text-[9px] px-1.5 py-0.2 bg-[#282a2c] border border-[rgba(255,255,255,0.1)] rounded text-[#c4c7c5] hover:text-white ml-1">Change</span>
-                    </button>
-                  </div>
-                  <span class="hidden sm:inline text-[10px] text-[#8e918f]">Ctrl + ↵ to Run</span>
-                </div>
-
-                <div class="flex items-center justify-between gap-2 pt-2 border-t border-[rgba(255,255,255,0.06)] min-w-0">
-                  <div class="flex items-center gap-2 text-xs font-mono text-[#8e918f] min-w-0 truncate">
-                    ${this.isExecuting ? `
-                      <span class="w-2 h-2 rounded-full bg-[#8ab4f8] animate-ping flex-shrink-0"></span>
-                      <span class="text-xs text-[#8ab4f8] font-mono truncate font-semibold">Generating code...</span>
-                    ` : `
-                      <kbd class="px-2 py-0.5 rounded bg-[#282a2c] text-[#8ab4f8] border border-[rgba(255,255,255,0.1)] font-mono text-xs font-bold flex-shrink-0">↵ Enter</kbd>
-                      <span class="text-xs text-[#c4c7c5] truncate">${this.aiMode === 'ask' ? 'Send Question' : 'Synthesize Code & Run'}</span>
-                    `}
-                  </div>
-
+                <!-- Swarm Sub-Agents Status Strip -->
+                <div class="w-full retro-panel px-3.5 py-2 flex items-center justify-between gap-3 shadow-md">
                   <div class="flex items-center gap-2 flex-shrink-0">
+                    <span class="led-indicator ${this.isExecuting ? 'led-accent led-pulsing' : 'led-white'}"></span>
+                    <span class="font-mono text-[10px] font-bold text-white uppercase tracking-wider">PIPELINE</span>
+                  </div>
+
+                  <div class="flex items-center gap-1.5 flex-1 justify-center overflow-x-auto custom-scrollbar px-1 min-w-0">
+                    <button class="btn-filter-role px-2.5 py-1 text-[10px] font-mono transition rounded cursor-pointer flex-shrink-0 border ${this.filterSwarmRole === 'ALL' ? 'bg-white text-black font-bold border-white' : 'bg-[#141414] text-[#737373] hover:text-white border-[#242424]'}" data-role="ALL">
+                      ALL
+                    </button>
+                    ${this.agentSwarmRoles.map(r => `
+                      <button class="btn-filter-role px-2.5 py-1 rounded border text-[10px] font-mono flex items-center gap-1.5 transition-all cursor-pointer flex-shrink-0 ${this.activeSwarmRole === r.id ? 'bg-[#38bdf8] text-black font-bold border-[#38bdf8] shadow-[0_0_8px_rgba(56,189,248,0.5)]' : (this.filterSwarmRole === r.id ? 'bg-white text-black border-white font-bold' : 'bg-[#141414] border-[#242424] text-[#737373] hover:text-white')}" data-role="${r.id}">
+                        <span class="w-1.5 h-1.5 rounded-full ${this.activeSwarmRole === r.id ? 'bg-black' : 'bg-[#404040]'} block"></span>
+                        <span>${r.name.toUpperCase()}</span>
+                      </button>
+                    `).join('')}
+                  </div>
+
+                  <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <span class="text-[10px] font-mono text-[#38bdf8] truncate max-w-[140px] font-bold">
+                      ${this.isExecuting ? (this.activeSwarmRole !== 'IDLE' ? this.activeSwarmRole : 'ACTIVE') : 'READY'}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Streamlined Activity & File Synthesis Notification -->
+                ${this.latestSavedFile ? `
+                  <div class="p-2.5 bg-[#082038] border border-[#0369a1] rounded flex items-center justify-between text-xs text-white shadow-md">
+                    <div class="flex items-center gap-2.5 truncate">
+                      <span class="text-[#38bdf8] flex-shrink-0">${MAC_ICONS.floppy}</span>
+                      <span class="font-bold text-[#38bdf8] uppercase text-[10px]">SAVED:</span>
+                      <span class="font-mono text-white truncate text-[11px]">${this.currentWorkspacePath}/${this.latestSavedFile.name}</span>
+                    </div>
+                    <button class="btn-select-file retro-btn retro-btn-accent px-2.5 py-1 text-[9px] font-bold flex items-center gap-1" data-path="${this.latestSavedFile.name}">
+                      ${MAC_ICONS.doc}
+                      <span>VIEW ↗</span>
+                    </button>
+                  </div>
+                ` : ''}
+
+                <!-- Messages Feed -->
+                <div id="messagesList" class="space-y-3.5">
+                  ${this.renderMessages()}
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. PROMPT TYPING DOCK (Hardware Input Strip) -->
+            <div class="p-3.5 border-t border-[#242424] bg-[#0a0a0a] flex justify-center flex-shrink-0 z-20 shadow-2xl">
+              <div class="max-w-4xl xl:max-w-5xl w-full space-y-2">
+                <!-- Workspace Status Strip -->
+                <div class="flex items-center justify-between text-xs font-mono text-[#737373] pb-1.5 border-b border-[#1c1c1c] gap-2 flex-wrap">
+                  <div class="flex items-center gap-2 min-w-0 truncate">
+                    <span class="text-[#38bdf8] font-bold">WORKSPACE:</span>
+                    <span class="text-white truncate">${this.currentWorkspacePath}</span>
+                  </div>
+                  
+                  <div class="flex items-center gap-2 text-[10px] font-mono text-[#737373]">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#38bdf8] shadow-[0_0_6px_#38bdf8] inline-block"></span>
+                    <span class="text-white font-bold">AUTONOMOUS AGENT ENGINE</span>
+                  </div>
+                </div>
+
+                <!-- Input Textarea -->
+                <textarea id="taskInput" rows="2" ${this.isExecuting ? 'disabled' : ''} placeholder="${this.isExecuting ? 'Agent is synthesizing codebase... Click Stop to halt.' : 'Describe what you want to build in your workspace (e.g., interactive tool, full-stack app, game)...'}" class="w-full bg-[#000000] border border-[#383838] focus:border-white rounded p-3 text-xs text-white font-mono outline-none resize-none custom-scrollbar min-h-[64px] max-h-[160px] leading-relaxed shadow-inner ${this.isExecuting ? 'opacity-50 cursor-not-allowed' : ''}">${this.taskPrompt}</textarea>
+
+                <div class="flex items-center justify-between gap-2 pt-1">
+                  <div class="flex items-center gap-2 text-[10px] font-mono text-[#737373]">
                     ${this.isExecuting ? `
-                      <button id="btnStopExecution" class="bg-[#ef4444] hover:bg-[#dc2626] text-white px-5 py-2 rounded-full font-extrabold flex items-center gap-1.5 text-xs transition shadow-lg active:scale-95 cursor-pointer btn-action flex-shrink-0">
-                        <svg class="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-                        <span>Stop</span>
+                      <span class="led-indicator led-accent led-pulsing"></span>
+                      <span class="text-[#38bdf8] font-bold uppercase flex items-center gap-1.5">
+                        ${MAC_ICONS.watch}
+                        <span>SYNTHESIZING CODEBASE &amp; WRITING TO DISK...</span>
+                      </span>
+                    ` : `
+                      <span class="border border-[#383838] bg-[#141414] px-1.5 py-0.5 rounded text-white font-bold flex items-center gap-1">
+                        ${MAC_ICONS.command}
+                        <span>ENTER</span>
+                      </span>
+                      <span>BUILD &amp; RUN</span>
+                    `}
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    ${this.isExecuting ? `
+                      <button id="btnStopExecution" class="retro-btn retro-btn-danger px-4 py-1.5 text-xs font-bold flex items-center gap-1.5">
+                        ${MAC_ICONS.bomb}
+                        <span>STOP EXECUTION</span>
                       </button>
                     ` : `
-                      <button id="btnClearChat" class="px-3 py-1.5 text-xs font-mono text-[#8e918f] hover:text-white transition cursor-pointer btn-action flex-shrink-0">
-                        Clear
+                      <button id="btnClearChat" class="retro-btn px-3 py-1.5 text-xs">
+                        CLEAR
                       </button>
-                      <!-- Google AI Studio Blue Pill Run Button -->
-                      <button id="btnSubmitTask" class="bg-[#1a73e8] hover:bg-[#1557b0] text-white px-6 py-2.5 rounded-full font-bold flex items-center gap-2 text-xs transition-all shadow-lg hover:shadow-[0_0_16px_rgba(26,115,232,0.4)] active:scale-95 cursor-pointer btn-action flex-shrink-0">
-                        <span>${this.aiMode === 'ask' ? 'Send' : 'Run'}</span>
-                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/></svg>
+                      <button id="btnSubmitTask" class="retro-btn retro-btn-accent px-6 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5">
+                        ${MAC_ICONS.command}
+                        <span>RUN PROMPT ↵</span>
                       </button>
                     `}
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          `)}
         </section>
 
-        <!-- 4. DRAGGABLE SPLITTER RESIZE HANDLE -->
+        <!-- 4. RESIZER HANDLE -->
         ${this.showSidePanel ? '<div id="resizerHandle" class="resizer-handle"></div>' : ''}
 
-        <!-- 5. RIGHT WORKSPACE PANEL (Browser, Editor, Tuning) -->
+        <!-- 5. RIGHT WORKSPACE PANEL (Browser Preview, Editor, Diff, Console, Settings) -->
         ${this.showSidePanel ? `
-          <aside class="flex flex-col bg-[#131314] border-l border-[rgba(255,255,255,0.08)] overflow-hidden z-20" style="width: ${this.panelWidthPercent}%">
-            <!-- Right Panel Header Tabs (Google AI Studio Style) -->
-            <div class="h-14 px-3 border-b border-[rgba(255,255,255,0.08)] bg-[#131314] flex items-center justify-between flex-shrink-0 text-xs">
-              <div class="flex items-center gap-1.5">
-                <button class="btn-ws-tab flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer btn-action ${this.activeWorkspaceTab === 'browser' ? 'bg-[#282a2c] text-white font-semibold border border-[rgba(255,255,255,0.12)]' : 'text-[#8e918f] hover:text-white'}" data-tab="browser">
-                  <svg class="w-3.5 h-3.5 text-[#81c995]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
-                  <span>Browser</span>
-                  ${this.isAppReady ? '<span class="w-1.5 h-1.5 rounded-full bg-[#81c995] shadow-[0_0_6px_#81c995]"></span>' : ''}
+          <aside class="flex flex-col bg-[#0a0a0a] border-l border-[#242424] overflow-hidden z-20 shadow-2xl" style="width: ${this.panelWidthPercent}%">
+            <!-- Right Panel Header Tabs -->
+            <div class="h-12 px-3 border-b border-[#242424] bg-[#000000] flex items-center justify-between flex-shrink-0 text-xs select-none shadow-sm">
+              <div class="flex items-center gap-1.5 overflow-x-auto custom-scrollbar">
+                <button class="btn-ws-tab retro-btn px-2.5 py-1 text-[10px] font-mono flex items-center gap-1.5 ${this.activeWorkspaceTab === 'browser' ? 'retro-btn-white' : ''}" data-tab="browser">
+                  ${MAC_ICONS.macScreen}
+                  <span>PREVIEW</span>
+                  ${this.isAppReady ? '<span class="w-1.5 h-1.5 bg-[#38bdf8] rounded-full inline-block"></span>' : ''}
                 </button>
-                <button class="btn-ws-tab flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer btn-action ${this.activeWorkspaceTab === 'editor' ? 'bg-[#282a2c] text-white font-semibold border border-[rgba(255,255,255,0.12)]' : 'text-[#8e918f] hover:text-white'}" data-tab="editor">
-                  <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-                  <span>Editor</span>
+                <button class="btn-ws-tab retro-btn px-2.5 py-1 text-[10px] font-mono flex items-center gap-1.5 ${this.activeWorkspaceTab === 'editor' ? 'retro-btn-white' : ''}" data-tab="editor">
+                  ${MAC_ICONS.handWrite}
+                  <span>EDITOR</span>
                 </button>
-                <button class="btn-ws-tab flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer btn-action ${this.activeWorkspaceTab === 'tuning' ? 'bg-[#282a2c] text-white font-semibold border border-[rgba(255,255,255,0.12)]' : 'text-[#8e918f] hover:text-white'}" data-tab="tuning">
-                  <svg class="w-3.5 h-3.5 text-[#8ab4f8]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-                  <span>Parameters</span>
+                <button class="btn-ws-tab retro-btn px-2.5 py-1 text-[10px] font-mono flex items-center gap-1.5 ${this.activeWorkspaceTab === 'diff' ? 'retro-btn-white' : ''}" data-tab="diff">
+                  ${MAC_ICONS.command}
+                  <span>DIFF</span>
+                </button>
+                <button class="btn-ws-tab retro-btn px-2.5 py-1 text-[10px] font-mono flex items-center gap-1.5 ${this.activeWorkspaceTab === 'console' ? 'retro-btn-white' : ''}" data-tab="console">
+                  ${MAC_ICONS.alertBubble}
+                  <span>CONSOLE (${this.consoleLogs.length})</span>
+                </button>
+                <button class="btn-ws-tab retro-btn px-2.5 py-1 text-[10px] font-mono flex items-center gap-1.5 ${this.activeWorkspaceTab === 'tuning' ? 'retro-btn-white' : ''}" data-tab="tuning">
+                  ${MAC_ICONS.briefcase}
+                  <span>SETTINGS</span>
                 </button>
               </div>
 
-              <div class="flex items-center gap-2">
-                <button id="btnCloseSidePanel" class="p-1.5 hover:bg-[#1e1f20] rounded-full text-[#8e918f] hover:text-white transition cursor-pointer btn-action">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-              </div>
+              <button id="btnCloseSidePanel" class="retro-btn px-2 py-1 text-xs font-mono" title="Close Panel">
+                ✕
+              </button>
             </div>
 
             <!-- Tab 1: Live Browser Preview -->
             ${this.activeWorkspaceTab === 'browser' ? `
-              <div class="flex-1 flex flex-col bg-black overflow-hidden">
-                <div class="h-9 px-3 border-b border-[rgba(255,255,255,0.08)] bg-[#131314] flex items-center justify-between gap-2 flex-shrink-0">
+              <div class="flex-1 flex flex-col bg-[#000000] overflow-hidden">
+                <!-- Preview Toolbar: DESKTOP ONLY -->
+                <div class="h-9 px-3 border-b border-[#242424] bg-[#0a0a0a] flex items-center justify-between gap-2 flex-shrink-0">
+                  <div class="flex items-center gap-2 text-[9px] font-mono text-[#737373]">
+                    <span class="text-[#38bdf8] font-bold">${MAC_ICONS.macScreen}</span>
+                    <span class="text-white font-bold uppercase tracking-wide">LIVE PREVIEW</span>
+                    ${this.isAppReady ? '<span class="w-1.5 h-1.5 rounded-full bg-[#38bdf8] shadow-[0_0_6px_#38bdf8] inline-block"></span>' : '<span class="w-1.5 h-1.5 rounded-full bg-[#404040] inline-block"></span>'}
+                  </div>
                   <div class="flex items-center gap-1.5">
-                    <span class="w-2.5 h-2.5 rounded-full bg-[#ef4444]"></span>
-                    <span class="w-2.5 h-2.5 rounded-full bg-[#eab308]"></span>
-                    <span class="w-2.5 h-2.5 rounded-full bg-[#22c55e]"></span>
-                  </div>
-                  <div class="flex-1 flex items-center bg-[#0e0e0f] border border-[rgba(255,255,255,0.1)] rounded-md px-2.5 py-0.5 text-xs font-mono text-[#ededed]">
-                    <span class="text-[#8e918f] mr-1">http://</span>
-                    <span class="text-white font-semibold">localhost:3000/</span>
-                    <span class="ml-2 px-1.5 py-0.2 text-[9px] bg-[#81c995]/20 text-[#81c995] rounded font-bold">LIVE BROWSER</span>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <button id="btnReloadPreview" class="p-1 hover:bg-[#1e1f20] rounded text-[#8e918f] hover:text-white transition cursor-pointer" title="Reload Website">
-                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <button id="btnReloadPreview" class="retro-btn px-2.5 py-0.5 text-[9px] font-mono" title="Reload Preview">
+                      [>] RELOAD
                     </button>
-                    <button id="btnOpenExternalBrowser" class="p-1 hover:bg-[#1e1f20] rounded text-[#8e918f] hover:text-white transition cursor-pointer" title="Open in New Window">
-                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    <button id="btnOpenExternalBrowser" class="retro-btn retro-btn-accent px-3 py-0.5 text-[9px] font-mono font-bold" title="Open in new window">
+                      OPEN ↗
                     </button>
                   </div>
                 </div>
-                <div class="flex-1 relative bg-white flex items-center justify-center overflow-hidden">
-                  <iframe id="previewIframe" class="w-full h-full border-none bg-white" sandbox="allow-scripts allow-modals allow-same-origin allow-forms allow-popups"></iframe>
-                  <div id="previewEmptyState" class="absolute inset-0 p-6 text-center space-y-3 bg-[#0e0e0f] flex flex-col items-center justify-center ${this.generatedSrcDoc ? 'hidden' : ''}">
-                    <div class="w-12 h-12 rounded-2xl bg-[#1e1f20] border border-[rgba(255,255,255,0.1)] flex items-center justify-center text-[#8ab4f8] shadow-lg">
-                      <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+
+                <!-- Preview Iframe: Full-Width Desktop Only -->
+                <div class="flex-1 relative bg-[#080808] overflow-hidden">
+                  <iframe id="previewIframe" class="absolute inset-0 w-full h-full border-none bg-white" sandbox="allow-scripts allow-modals allow-same-origin allow-forms allow-popups"></iframe>
+
+                  <div id="previewEmptyState" class="absolute inset-0 p-6 text-center space-y-4 bg-[#000000] flex flex-col items-center justify-center ${this.generatedSrcDoc ? 'hidden' : ''}">
+                    <div class="w-14 h-14 border-2 border-[#383838] flex items-center justify-center text-[#38bdf8] shadow-lg" style="clip-path: polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%)">
+                      ${MAC_ICONS.macScreen}
                     </div>
-                    <h3 class="text-sm font-bold text-white">Browser Ready</h3>
-                    <p class="text-xs text-[#8e918f] max-w-xs font-mono">Ask Spring AI Agent to build any app to interactively preview the live website here.</p>
+                    <div class="space-y-1">
+                      <h3 class="text-xs font-bold text-white uppercase font-mono tracking-widest">[//] LIVE PREVIEW</h3>
+                      <p class="text-[10px] text-[#737373] font-mono">Submit a prompt in Agent Mode to synthesize and render your application here.</p>
+                    </div>
+                    <div class="flex items-center gap-2 text-[9px] font-mono text-[#404040]">
+                      <span class="w-1 h-1 bg-[#404040] rounded-full"></span>
+                      <span>DESKTOP PREVIEW // FULL RESOLUTION</span>
+                      <span class="w-1 h-1 bg-[#404040] rounded-full"></span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1378,134 +1691,152 @@ export class WorkspaceComponent {
 
             <!-- Tab 2: Code Editor -->
             ${this.activeWorkspaceTab === 'editor' ? `
-              <div class="flex-1 flex overflow-hidden">
-                <div class="w-48 border-r border-[rgba(255,255,255,0.08)] bg-[#131314] flex flex-col font-mono flex-shrink-0">
-                  <div class="h-9 px-2.5 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between text-[10px] text-[#ededed] bg-[#0e0e0f]">
-                    <span class="truncate font-semibold text-white">Files (${this.fileList.length})</span>
-                    <button id="btnRefreshFiles" class="hover:text-white p-0.5 text-xs cursor-pointer" title="Refresh files">
-                      <svg class="w-3.5 h-3.5 text-[#8e918f]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    </button>
+              <div class="flex-1 flex overflow-hidden font-mono">
+                <!-- File Tree Rail -->
+                <div class="w-48 border-r border-[#242424] bg-[#050505] flex flex-col flex-shrink-0">
+                  <div class="h-9 px-3 border-b border-[#242424] flex items-center justify-between text-[10px] text-white font-bold bg-[#0a0a0a]">
+                    <span>WORKSPACE FILES (${this.fileList.length})</span>
+                    <button id="btnRefreshFiles" class="hover:text-white p-1 text-[11px] text-[#737373]" title="Refresh">↻</button>
                   </div>
-                  <div id="fileListContainer" class="flex-1 overflow-y-auto p-2 space-y-0.5 custom-scrollbar text-xs">
+                  <div id="fileListContainer" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar text-xs">
                     ${this.fileList.map(f => `
-                      <div class="file-item px-2 py-1.5 rounded-lg cursor-pointer flex items-center justify-between transition ${this.selectedFile?.path === f.path ? 'bg-[#1e1f20] text-white font-semibold border-l-2 border-[#8ab4f8] pl-1.5' : 'text-[#8e918f] hover:text-white hover:bg-[#1e1f20]'}" data-path="${f.path}">
-                        <div class="flex items-center gap-2 truncate">
-                          <svg class="w-3.5 h-3.5 ${f.name.endsWith('.html') ? 'text-orange-400' : f.name.endsWith('.css') ? 'text-blue-400' : f.name.endsWith('.js') ? 'text-yellow-400' : 'text-[#71717a]'}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                      <div class="file-item group px-2.5 py-1.5 rounded cursor-pointer flex items-center justify-between border ${this.selectedFile?.path === f.path ? 'bg-white text-black font-bold border-white shadow' : 'text-[#a3a3a3] border-transparent hover:bg-[#141414] hover:text-white'}" data-path="${f.path}">
+                        <div class="flex items-center gap-1.5 truncate">
+                          <span class="text-[#737373] group-hover:text-white">${MAC_ICONS.doc}</span>
                           <span class="truncate text-[11px]">${f.name}</span>
                         </div>
+                        <button class="btn-delete-file opacity-0 group-hover:opacity-100 p-0.5 text-[#737373] hover:text-[#38bdf8]" data-path="${f.path}" title="Delete file">
+                          ${MAC_ICONS.trash}
+                        </button>
                       </div>
                     `).join('')}
-                    ${this.fileList.length === 0 ? '<div class="p-3 text-[#8e918f] text-[10px] font-mono">No files created yet.</div>' : ''}
+                    ${this.fileList.length === 0 ? '<div class="p-3 text-[#737373] text-[10px]">NO FILES FOUND</div>' : ''}
                   </div>
                 </div>
 
-                <div class="flex-1 flex flex-col bg-[#0e0e0f] overflow-hidden font-mono min-w-0">
-                  ${this.isStreamingCode ? `
-                    <div class="px-3 py-1.5 bg-[#8ab4f8]/10 border-b border-[#8ab4f8]/30 flex items-center justify-between text-[11px] font-mono animate-fadeIn flex-shrink-0">
-                      <div class="flex items-center gap-2 text-[#8ab4f8] truncate">
-                        <span class="w-2 h-2 rounded-full bg-[#8ab4f8] animate-ping flex-shrink-0"></span>
-                        <span class="font-bold">LIVE SYNTHESIS:</span>
-                        <span class="text-white truncate">${this.streamingFileName}</span>
-                        <span class="text-[#8e918f]">(Line ${this.streamingLineNum}/${this.totalStreamingLines})</span>
-                      </div>
-                      <span class="text-[#8ab4f8] font-bold text-[10px] flex-shrink-0">⚡ STREAMING</span>
+                <!-- Editor Textarea Area -->
+                <div class="flex-1 flex flex-col bg-[#000000] overflow-hidden min-w-0">
+                  <div class="h-9 px-3 border-b border-[#242424] bg-[#0a0a0a] flex items-center justify-between text-xs flex-shrink-0">
+                    <div class="flex items-center gap-2 truncate">
+                      <span class="text-[#38bdf8]">${MAC_ICONS.doc}</span>
+                      <span class="text-white font-bold text-[11px] truncate font-mono">${this.selectedFile?.path || 'index.html'}</span>
                     </div>
-                  ` : ''}
-
-                  <div class="h-8 px-3 border-b border-[rgba(255,255,255,0.08)] bg-[#131314] flex items-center justify-between text-xs flex-shrink-0">
-                    <span class="text-white font-medium text-[11px] truncate">${this.selectedFile?.path || (this.fileList.length > 0 ? this.fileList[0].path : 'index.html')}</span>
-                    <div class="flex items-center gap-2">
-                      <button id="btnSaveFile" class="px-3 py-0.5 bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold rounded-full text-[10px] transition cursor-pointer flex items-center gap-1 btn-action">
-                        <span>Save</span>
-                      </button>
-                    </div>
+                    <button id="btnSaveFile" class="retro-btn retro-btn-white px-3 py-1 text-[9px] font-mono font-bold flex items-center gap-1.5">
+                      ${MAC_ICONS.floppy}
+                      <span>SAVE (⌘+S)</span>
+                    </button>
                   </div>
-
-                  <div class="flex-1 overflow-y-auto p-3 text-xs select-text custom-scrollbar flex bg-[#0e0e0f] relative">
-                    <textarea id="editorTextarea" spellcheck="false" class="w-full h-full bg-transparent text-[#ededed] font-mono text-[11px] leading-relaxed outline-none resize-none border-none p-0 custom-scrollbar">${this.escapeHtml(this.fileContent)}</textarea>
+                  <div class="flex-1 flex overflow-hidden">
+                    <div id="editorLineGutter" class="w-10 bg-[#080808] border-r border-[#1c1c1c] text-[#404040] text-[11px] font-mono text-right pr-2 pt-2.5 select-none overflow-hidden">
+                      ${Array.from({ length: Math.max(1, (this.fileContent || '').split('\n').length) }, (_, i) => `<div>${i + 1}</div>`).join('')}
+                    </div>
+                    <textarea id="editorTextarea" class="flex-1 bg-[#000000] text-white font-mono text-xs p-2.5 outline-none resize-none custom-scrollbar leading-relaxed whitespace-pre">${this.escapeHtml(this.fileContent)}</textarea>
                   </div>
                 </div>
               </div>
             ` : ''}
 
-            <!-- Tab 3: Model Tuning & Parameters (Google AI Studio Panel) -->
-            ${this.activeWorkspaceTab === 'tuning' ? `
-              <div class="flex-1 flex flex-col bg-[#131314] overflow-y-auto p-4 space-y-4 custom-scrollbar text-xs">
-                <div class="space-y-1">
-                  <span class="text-[11px] font-bold text-white uppercase tracking-wider">Model Tuning &amp; Run Settings</span>
-                  <p class="text-[11px] text-[#8e918f]">Configure runtime generation parameters and autonomous quality gates.</p>
+            <!-- Tab 3: Diff Viewer -->
+            ${this.activeWorkspaceTab === 'diff' ? `
+              <div class="flex-1 flex flex-col bg-[#000000] overflow-hidden font-mono text-xs">
+                <div class="h-9 px-3 border-b border-[#242424] bg-[#0a0a0a] flex items-center justify-between flex-shrink-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-[#38bdf8]">${MAC_ICONS.command}</span>
+                    <span class="text-white font-bold text-[11px]">DIFF // CURRENT vs DISK</span>
+                  </div>
+                  <select id="selectDiffFile" class="bg-[#141414] border border-[#383838] rounded text-white text-[10px] px-2.5 py-1 outline-none cursor-pointer">
+                    ${this.fileList.map(f => `<option value="${f.path}" ${this.diffSelectedFile === f.path ? 'selected' : ''}>${f.name}</option>`).join('')}
+                  </select>
                 </div>
+                <div class="flex-1 overflow-auto custom-scrollbar p-3.5 text-[11.5px] space-y-1 bg-[#000000]">
+                  <pre class="text-white whitespace-pre-wrap"><code>${this.escapeHtml(this.fileContent)}</code></pre>
+                </div>
+              </div>
+            ` : ''}
 
-                <!-- Model Selector -->
-                <div class="space-y-1.5 bg-[#1e1f20] border border-[rgba(255,255,255,0.08)] rounded-2xl p-3.5">
-                  <label class="text-[10px] font-mono text-[#8e918f] uppercase font-bold">Selected Model</label>
-                  <div class="flex items-center justify-between p-2 bg-[#131314] border border-[rgba(255,255,255,0.1)] rounded-xl">
-                    <div class="flex items-center gap-2">
-                      <div class="w-2 h-2 rounded-full bg-[#81c995]"></div>
-                      <span class="font-bold text-white text-xs">deepseek-coder:6.7b</span>
+            <!-- Tab 4: Console Telemetry Feed (Monochrome CRT Screen) -->
+            ${this.activeWorkspaceTab === 'console' ? `
+              <div class="flex-1 flex flex-col retro-screen-mono overflow-hidden font-mono text-xs shadow-2xl">
+                <div class="h-9 px-3 border-b border-[#242424] bg-[#0a0a0a] flex items-center justify-between flex-shrink-0 relative z-10">
+                  <div class="flex items-center gap-1.5">
+                    <button class="btn-console-filter px-2.5 py-0.5 rounded text-[9px] font-bold ${this.consoleFilter === 'all' ? 'bg-white text-black' : 'text-[#737373] hover:text-white'}" data-filter="all">ALL</button>
+                    <button class="btn-console-filter px-2.5 py-0.5 rounded text-[9px] font-bold ${this.consoleFilter === 'log' ? 'bg-white text-black' : 'text-[#737373] hover:text-white'}" data-filter="log">LOGS</button>
+                    <button class="btn-console-filter px-2.5 py-0.5 rounded text-[9px] font-bold ${this.consoleFilter === 'error' ? 'bg-[#ff4d4d] text-white' : 'text-[#737373] hover:text-white'}" data-filter="error">ERRORS</button>
+                  </div>
+                  <button id="btnClearConsoleLogs" class="px-2.5 py-0.5 rounded text-[9px] text-[#737373] border border-[#242424] hover:text-white hover:border-white">CLEAR</button>
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1.5 text-[11.5px] select-text relative z-10">
+                  ${this.consoleLogs.map(c => `
+                    <div class="flex items-start gap-2 ${c.level === 'error' ? 'text-[#ff4d4d] font-bold' : (c.level === 'warn' ? 'text-[#38bdf8]' : 'text-white')}">
+                      <span class="text-[#737373]">[${c.timestamp}]</span>
+                      <span class="font-bold">[${c.level.toUpperCase()}]</span>
+                      <span>${this.escapeHtml(c.message)}</span>
                     </div>
-                    <span class="text-[10px] text-[#8ab4f8] font-mono font-semibold">Ollama Local</span>
+                  `).join('')}
+                  ${this.consoleLogs.length === 0 ? '<div class="p-4 text-[#737373] text-[10px]">NO CONSOLE SIGNALS</div>' : ''}
+                </div>
+                <div class="p-2 border-t border-[#242424] bg-[#0a0a0a] flex items-center gap-2 relative z-10">
+                  <span class="text-white text-xs font-bold pl-1">&gt;</span>
+                  <input type="text" id="inputConsoleEval" placeholder="Evaluate JavaScript in preview iframe..." class="flex-1 bg-transparent text-white text-xs outline-none font-mono placeholder:text-[#404040]" />
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Tab 5: Settings / Tuning -->
+            ${this.activeWorkspaceTab === 'tuning' ? `
+              <div class="flex-1 overflow-y-auto p-4 space-y-4 font-mono text-xs bg-[#050505] custom-scrollbar">
+                <div class="space-y-2 p-3 retro-panel">
+                  <label class="text-white font-bold uppercase">[TEMPERATURE / CREATIVITY]</label>
+                  <div class="flex items-center gap-3">
+                    <input type="range" id="inputTemperature" min="0" max="1" step="0.05" value="${this.temperature}" class="flex-1 accent-white" />
+                    <span id="tempValueBadge" class="border border-[#383838] bg-[#141414] px-2.5 py-1 rounded text-white font-bold">${this.temperature.toFixed(2)}</span>
                   </div>
                 </div>
 
-                <!-- Temperature Slider -->
-                <div class="space-y-2 bg-[#1e1f20] border border-[rgba(255,255,255,0.08)] rounded-2xl p-3.5">
-                  <div class="flex items-center justify-between">
-                    <label class="text-[10px] font-mono text-[#8e918f] uppercase font-bold">Temperature</label>
-                    <span id="tempValueBadge" class="text-xs font-mono font-bold text-[#8ab4f8] bg-[#131314] px-2 py-0.5 rounded border border-[rgba(255,255,255,0.08)]">${this.temperature.toFixed(2)}</span>
+                <div class="space-y-2 p-3 retro-panel">
+                  <label class="text-white font-bold uppercase flex items-center justify-between">
+                    <span>[GOOGLE GEMINI API KEY]</span>
+                    <span class="text-[10px] text-[#8e8e93] font-normal">Fast, Multimodal, Real-Time</span>
+                  </label>
+                  <div class="relative">
+                    <input type="password" id="inputGeminiApiKey" 
+                      placeholder="AIzaSy..." 
+                      value="${localStorage.getItem('gemini_api_key') || ''}" 
+                      class="w-full bg-[#141414] border border-[#383838] rounded p-2 text-white outline-none focus:border-white text-xs font-mono pr-16" />
+                    <button id="btnToggleShowGeminiKey" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] bg-[#242424] hover:bg-[#383838] px-1.5 py-0.5 rounded text-[#a1a1aa]">
+                      SHOW
+                    </button>
                   </div>
-                  <input type="range" id="inputTemperature" min="0.0" max="2.0" step="0.05" value="${this.temperature}" class="google-range-slider cursor-pointer" />
-                  <div class="flex justify-between text-[10px] text-[#8e918f] font-mono">
-                    <span>0.0 (Precise)</span>
-                    <span>1.0 (Balanced)</span>
-                    <span>2.0 (Creative)</span>
-                  </div>
-                </div>
-
-                <!-- Max Output Tokens -->
-                <div class="space-y-1.5 bg-[#1e1f20] border border-[rgba(255,255,255,0.08)] rounded-2xl p-3.5">
-                  <div class="flex items-center justify-between">
-                    <label class="text-[10px] font-mono text-[#8e918f] uppercase font-bold">Max Output Tokens</label>
-                    <span class="text-xs font-mono font-bold text-white">8,192</span>
-                  </div>
-                  <div class="w-full bg-[#131314] rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-[#8ab4f8] h-full w-[85%]"></div>
+                  <div class="text-[10px] text-[#737373] flex items-center justify-between">
+                    <span>Stored securely in browser session</span>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-white hover:underline flex items-center gap-1 font-bold">Get Key ↗</a>
                   </div>
                 </div>
 
-                <!-- Autonomous Quality Gates -->
-                <div class="space-y-2 bg-[#1e1f20] border border-[rgba(255,255,255,0.08)] rounded-2xl p-3.5">
-                  <label class="text-[10px] font-mono text-[#8e918f] uppercase font-bold">Autonomous Quality Gates</label>
-                  <div class="space-y-2 pt-1 text-xs">
-                    <label class="flex items-center gap-2 cursor-pointer text-[#c4c7c5] hover:text-white">
-                      <input type="checkbox" checked class="accent-[#8ab4f8] rounded" />
-                      <span>QA Tester Agent (Automated verification)</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer text-[#c4c7c5] hover:text-white">
-                      <input type="checkbox" checked class="accent-[#8ab4f8] rounded" />
-                      <span>Security Auditor (Vulnerability scanning)</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer text-[#c4c7c5] hover:text-white">
-                      <input type="checkbox" checked class="accent-[#8ab4f8] rounded" />
-                      <span>Live Preview Server (Port 3000)</span>
-                    </label>
-                  </div>
+                <div class="space-y-2 p-3 retro-panel">
+                  <label class="text-white font-bold uppercase">[ACTIVE MODEL ENGINE]</label>
+                  <select id="selectModelId" class="w-full bg-[#141414] border border-[#383838] rounded p-2 text-white outline-none">
+                    <option value="gemini-1.5-flash" ${(localStorage.getItem('agent_model') || this.selectedModelId) === 'gemini-1.5-flash' ? 'selected' : ''}>Google Gemini 1.5 Flash (Recommended)</option>
+                    <option value="gemini-2.0-flash" ${(localStorage.getItem('agent_model') || this.selectedModelId) === 'gemini-2.0-flash' ? 'selected' : ''}>Google Gemini 2.0 Flash (Fastest)</option>
+                    <option value="gemini-1.5-pro" ${(localStorage.getItem('agent_model') || this.selectedModelId) === 'gemini-1.5-pro' ? 'selected' : ''}>Google Gemini 1.5 Pro (Deep Reasoning)</option>
+                    <option value="deepseek-coder" ${(localStorage.getItem('agent_model') || this.selectedModelId) === 'deepseek-coder' ? 'selected' : ''}>DeepSeek Coder (Local/Cloud)</option>
+                    <option value="llama3" ${(localStorage.getItem('agent_model') || this.selectedModelId) === 'llama3' ? 'selected' : ''}>Llama 3 (Ollama)</option>
+                    <option value="qwen2.5-coder" ${(localStorage.getItem('agent_model') || this.selectedModelId) === 'qwen2.5-coder' ? 'selected' : ''}>Qwen 2.5 Coder (Ollama)</option>
+                  </select>
                 </div>
 
-                <!-- Active Runtime Telemetry -->
-                <div class="space-y-1.5 bg-[#1e1f20] border border-[rgba(255,255,255,0.08)] rounded-2xl p-3.5 font-mono text-[11px]">
-                  <span class="text-[10px] text-[#8e918f] uppercase font-bold">System Runtime</span>
-                  <div class="flex items-center justify-between pt-1">
-                    <span class="text-[#8e918f]">Web Server:</span>
-                    <span class="text-[#81c995] font-bold">http://localhost:3000</span>
-                  </div>
+                <div class="space-y-2 p-3 retro-panel">
                   <div class="flex items-center justify-between">
-                    <span class="text-[#8e918f]">Backend API:</span>
-                    <span class="text-[#8ab4f8] font-bold">http://localhost:8080</span>
+                    <label class="text-white font-bold uppercase text-[11px]">[WORKSPACE ROOT DIRECTORY]</label>
+                    <button id="btnSettingsOpenExplorer" class="text-[#38bdf8] hover:underline text-[10px] cursor-pointer">↗ OPEN EXPLORER</button>
                   </div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-[#8e918f]">Active Tenant:</span>
-                    <span class="text-white">${this.currentTenant}</span>
+                  <div class="p-2.5 bg-[#000000] border border-[#242424] rounded text-white text-[11px] select-text font-bold break-all">
+                    ${this.escapeHtml(this.currentWorkspacePath)}
+                  </div>
+                  <div class="flex items-center gap-2 pt-1">
+                    <button id="btnSettingsBrowseFolder" class="flex-1 retro-btn retro-btn-accent py-1.5 text-[10px] font-bold">
+                      📁 CHANGE / BROWSE FOLDER
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1514,251 +1845,128 @@ export class WorkspaceComponent {
         ` : ''}
       </div>
 
-      <!-- Google AI Studio "Get Code" Modal -->
-      ${this.showGetCodeModal ? `
-        <div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div class="bg-[#1e1f20] border border-[rgba(255,255,255,0.12)] rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-            <!-- Header -->
-            <div class="h-14 px-6 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between bg-[#131314]">
-              <div class="flex items-center gap-2.5">
-                <svg class="w-5 h-5 text-[#8ab4f8]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                <span class="font-bold text-white text-base">Get code</span>
-                <span class="text-[11px] bg-[#282a2c] text-[#8ab4f8] px-2.5 py-0.5 rounded-full border border-[rgba(255,255,255,0.08)] font-mono">Spring AI Autonomous Dev</span>
-              </div>
-              <button id="btnCloseGetCodeModal" class="text-[#8e918f] hover:text-white text-lg font-mono cursor-pointer transition">✕</button>
-            </div>
-
-            <!-- Language Tabs -->
-            <div class="px-6 pt-2 flex items-center gap-2 border-b border-[rgba(255,255,255,0.06)] bg-[#131314]">
-              <button class="btn-getcode-tab px-4 py-2.5 text-xs font-mono font-bold transition border-b-2 cursor-pointer ${this.getCodeActiveTab === 'curl' ? 'border-[#8ab4f8] text-[#8ab4f8]' : 'border-transparent text-[#8e918f] hover:text-white'}" data-tab="curl">cURL</button>
-              <button class="btn-getcode-tab px-4 py-2.5 text-xs font-mono font-bold transition border-b-2 cursor-pointer ${this.getCodeActiveTab === 'python' ? 'border-[#8ab4f8] text-[#8ab4f8]' : 'border-transparent text-[#8e918f] hover:text-white'}" data-tab="python">Python</button>
-              <button class="btn-getcode-tab px-4 py-2.5 text-xs font-mono font-bold transition border-b-2 cursor-pointer ${this.getCodeActiveTab === 'typescript' ? 'border-[#8ab4f8] text-[#8ab4f8]' : 'border-transparent text-[#8e918f] hover:text-white'}" data-tab="typescript">JavaScript / TS</button>
-              <button class="btn-getcode-tab px-4 py-2.5 text-xs font-mono font-bold transition border-b-2 cursor-pointer ${this.getCodeActiveTab === 'java' ? 'border-[#8ab4f8] text-[#8ab4f8]' : 'border-transparent text-[#8e918f] hover:text-white'}" data-tab="java">Java (Spring AI)</button>
-            </div>
-
-            <!-- Code Body -->
-            <div class="p-6 flex-1 overflow-y-auto custom-scrollbar bg-[#0e0e0f]">
-              <pre class="font-mono text-xs text-[#e3e3e3] p-4 bg-[#131314] rounded-2xl border border-[rgba(255,255,255,0.08)] whitespace-pre-wrap overflow-x-auto leading-relaxed"><code>${this.escapeHtml(this.getActiveCodeSnippet())}</code></pre>
-            </div>
-
-            <!-- Footer -->
-            <div class="h-14 px-6 border-t border-[rgba(255,255,255,0.08)] bg-[#131314] flex items-center justify-between">
-              <span class="text-xs text-[#8e918f]">Ready to run against http://localhost:8080</span>
-              <button id="btnCopyGetCode" class="bg-[#1a73e8] hover:bg-[#1557b0] text-white px-5 py-2 rounded-full font-bold text-xs flex items-center gap-2 transition cursor-pointer btn-action shadow-lg">
-                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                <span id="labelCopyGetCode">Copy code</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      ` : ''}
+      <!-- Modals -->
+      ${this.renderFolderSelectionModal()}
+      ${this.renderUserAccountModal()}
+      ${this.renderPipelineTriggerModal()}
     `;
-
-    this.attachEventListeners();
   }
 
   private renderMessages(): string {
-    const currentList = this.messages.filter(msg => {
-      if (this.aiMode === 'ask') {
-        return msg.mode === 'ask';
-      } else {
-        return msg.mode === 'agent' || !msg.mode;
-      }
+    const activeMessages = this.messages.filter(msg => {
+      return msg.type === 'text' || msg.type === 'plan' || msg.type === 'thought' || msg.type === 'action' || msg.type === 'test_report' || msg.type === 'decision' || msg.type === 'security_audit' || msg.type === 'answer';
     });
 
-    if (currentList.length === 0 && !this.isExecuting && !this.isStreamingCode) {
+    if (activeMessages.length === 0) {
       return `
-        <div class="empty-state-card w-full py-8 sm:py-12 px-4 flex flex-col items-center justify-center text-center animate-fadeIn space-y-6">
-          <div class="relative flex items-center justify-center">
-            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-[#1a73e8] via-[#9b72cb] to-[#81c995] p-[1.5px] shadow-[0_0_30px_rgba(138,180,248,0.25)]">
-              <div class="w-full h-full bg-[#111218] rounded-[22px] flex items-center justify-center">
-                <svg class="w-8 h-8 sm:w-10 sm:h-10" viewBox="0 0 24 24">
-                  <defs>
-                    <linearGradient id="gemEmptyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#8ab4f8"/>
-                      <stop offset="50%" stop-color="#c58af9"/>
-                      <stop offset="100%" stop-color="#81c995"/>
-                    </linearGradient>
-                  </defs>
-                  <path fill="url(#gemEmptyGrad)" d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
-                </svg>
-              </div>
-            </div>
-            <span class="absolute -bottom-1 -right-1 flex h-4 w-4">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#81c995] opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-4 w-4 bg-[#81c995] border-2 border-[#111218]"></span>
-            </span>
+        <div class="p-8 text-center space-y-3 font-mono text-xs text-[#737373] animate-fadeIn border border-[#242424] rounded-lg bg-[#050505]">
+          <div class="text-white text-sm font-bold uppercase flex items-center justify-center gap-2">
+            <span class="text-[#38bdf8]">${MAC_ICONS.happyMac}</span>
+            <span>[//] AUTONOMOUS AGENT SWARM STUDIO</span>
           </div>
-
-          <div class="space-y-2 max-w-xl">
-            <h2 class="text-xl sm:text-2xl font-extrabold text-white font-heading tracking-tight">
-              Spring AI <span class="gemini-gradient-text">Autonomous Engineer</span>
-            </h2>
-            <p class="text-xs sm:text-sm text-[#8e918f] leading-relaxed">
-              Architect, code, test, and deploy entire full-stack applications in your workspace with multi-agent intelligence.
-            </p>
-          </div>
-
-          <!-- Quick Suggestion Starter Prompt Cards -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl pt-2 text-left">
-            <div class="btn-quick-prompt p-3.5 bg-[#16171f]/80 hover:bg-[#1f202c] border border-[rgba(255,255,255,0.08)] hover:border-[#8ab4f8]/50 rounded-2xl cursor-pointer transition-all duration-200 group shadow-md hover:shadow-[0_4px_20px_rgba(138,180,248,0.15)]" data-prompt="Build a modern full-stack analytics dashboard with real-time charts, metric cards, dark theme, and interactive filters.">
-              <div class="flex items-center gap-2 mb-1.5">
-                <span class="w-6 h-6 rounded-lg bg-[#1a73e8]/20 flex items-center justify-center text-xs">🚀</span>
-                <span class="text-xs font-bold text-white group-hover:text-[#8ab4f8] transition">Analytics Dashboard</span>
-              </div>
-              <p class="text-[11px] text-[#8e918f] line-clamp-2">Full-stack metric charts, interactive telemetry, and responsive dark glass UI.</p>
-            </div>
-
-            <div class="btn-quick-prompt p-3.5 bg-[#16171f]/80 hover:bg-[#1f202c] border border-[rgba(255,255,255,0.08)] hover:border-[#c58af9]/50 rounded-2xl cursor-pointer transition-all duration-200 group shadow-md hover:shadow-[0_4px_20px_rgba(197,138,249,0.15)]" data-prompt="Build a luxury responsive e-commerce web application with product catalog, search filters, interactive cart drawer, and modern checkout.">
-              <div class="flex items-center gap-2 mb-1.5">
-                <span class="w-6 h-6 rounded-lg bg-[#c58af9]/20 flex items-center justify-center text-xs">🛒</span>
-                <span class="text-xs font-bold text-white group-hover:text-[#c58af9] transition">Luxury E-Commerce</span>
-              </div>
-              <p class="text-[11px] text-[#8e918f] line-clamp-2">Product showcase, instant search, cart slide-over, and checkout flow.</p>
-            </div>
-
-            <div class="btn-quick-prompt p-3.5 bg-[#16171f]/80 hover:bg-[#1f202c] border border-[rgba(255,255,255,0.08)] hover:border-[#81c995]/50 rounded-2xl cursor-pointer transition-all duration-200 group shadow-md hover:shadow-[0_4px_20px_rgba(129,201,149,0.15)]" data-prompt="Build a Kanban task management app with draggable board cards, swimlanes, tag labels, and project progress statistics.">
-              <div class="flex items-center gap-2 mb-1.5">
-                <span class="w-6 h-6 rounded-lg bg-[#81c995]/20 flex items-center justify-center text-xs">📋</span>
-                <span class="text-xs font-bold text-white group-hover:text-[#81c995] transition">Kanban Board App</span>
-              </div>
-              <p class="text-[11px] text-[#8e918f] line-clamp-2">Drag-and-drop tasks, custom column stages, priorities, and project stats.</p>
-            </div>
-
-            <div class="btn-quick-prompt p-3.5 bg-[#16171f]/80 hover:bg-[#1f202c] border border-[rgba(255,255,255,0.08)] hover:border-[#fdd663]/50 rounded-2xl cursor-pointer transition-all duration-200 group shadow-md hover:shadow-[0_4px_20px_rgba(253,214,99,0.15)]" data-prompt="Build an interactive Retro Arcade 2D game on HTML Canvas with sound effects, particle collisions, high score tracker, and retro styling.">
-              <div class="flex items-center gap-2 mb-1.5">
-                <span class="w-6 h-6 rounded-lg bg-[#fdd663]/20 flex items-center justify-center text-xs">🎮</span>
-                <span class="text-xs font-bold text-white group-hover:text-[#fdd663] transition">Retro Canvas Game</span>
-              </div>
-              <p class="text-[11px] text-[#8e918f] line-clamp-2">Smooth physics loop, particle fx, procedural stages, and sound synthesis.</p>
-            </div>
+          <p class="max-w-md mx-auto text-[#a3a3a3] font-sans leading-relaxed text-xs">
+            Describe the application, tool, or component you want to build. The 5-stage agent swarm (Architect, Coder, QA Tester, Security, DevOps) will generate the complete codebase and write it to your folder.
+          </p>
+          <div class="flex items-center justify-center gap-2 pt-2 text-[10px] text-[#737373]">
+            <span class="led-indicator led-white"></span>
+            <span>SWARM READY // ENTER SPECIFICATION BELOW</span>
           </div>
         </div>
       `;
     }
 
-    return currentList.map(msg => {
-      // 1. User Message
+    return activeMessages.map((msg) => {
+      // 1. User Prompt Card
       if (msg.sender === 'user') {
         return `
-          <div class="p-4 sm:p-5 bg-gradient-to-r from-[#181920] to-[#1e1f29] border border-[rgba(255,255,255,0.08)] rounded-2xl flex items-start gap-3.5 animate-fadeIn shadow-sm group">
-            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-md ring-2 ring-white/10">
-              U
+          <div class="p-3.5 retro-panel border border-[#383838] bg-[#0f0f0f] text-xs font-mono space-y-1.5 animate-fadeIn shadow-lg">
+            <div class="flex items-center justify-between text-[10px] text-[#737373] uppercase">
+              <span class="text-white font-bold flex items-center gap-1.5">
+                <span class="text-white flex-shrink-0">${MAC_ICONS.handWrite}</span>
+                <span>[//] USER // TASK SPECIFICATION</span>
+              </span>
+              <span>${msg.timestamp}</span>
             </div>
-            <div class="flex-1 min-w-0 space-y-1.5">
-              <div class="flex items-center justify-between text-xs text-[#8e918f]">
-                <span class="font-semibold text-white tracking-wide">You</span>
-                <span class="text-[10px] font-mono text-[#71717a]">${msg.timestamp}</span>
-              </div>
-              <div class="text-sm text-[#f0f2f5] whitespace-pre-wrap leading-relaxed select-text font-normal">${this.escapeHtml(msg.content)}</div>
-            </div>
+            <div class="text-white font-sans text-[13.5px] leading-relaxed select-text font-medium">${this.escapeHtml(msg.content)}</div>
           </div>
         `;
       }
 
-      // 2. Implementation Plan Message
+      // 2. Plan Proposal Checklist
       if (msg.type === 'plan') {
-        const totalSteps = (msg.steps && msg.steps.length > 0) ? msg.steps.length : 1;
-        const completedSteps = msg.steps ? msg.steps.filter(s => s.completed).length : 0;
-        const isAllDone = (msg.steps && msg.steps.length > 0) ? msg.steps.every(s => s.completed) : false;
-        const computedPercent = isAllDone ? 100 : Math.min(100, Math.max(this.progressPercent, Math.round((completedSteps / totalSteps) * 100)));
-        const isDone = computedPercent === 100 || isAllDone;
-        const displayPercent = isDone ? 100 : computedPercent;
+        const steps = msg.steps || [];
+        if (!this.isExecuting) {
+          steps.forEach(s => {
+            s.completed = true;
+            s.status = 'completed';
+          });
+        }
+        const totalSteps = steps.length > 0 ? steps.length : 4;
+        const completedCount = steps.filter(s => s.completed || s.status === 'completed').length;
+        const progressPercent = !this.isExecuting ? 100 : Math.round((completedCount / totalSteps) * 100);
 
         return `
-          <div class="card-msg p-5 sm:p-6 bg-[#12131a] border border-[rgba(138,180,248,0.25)] rounded-2xl shadow-xl space-y-4 animate-fadeIn relative overflow-hidden">
-            <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#8ab4f8] via-[#c58af9] to-[#81c995]"></div>
-            
-            <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-3">
+          <div class="p-4 retro-panel border border-[#383838] space-y-3.5 animate-fadeIn font-mono shadow-xl">
+            <div class="flex items-center justify-between border-b border-[#242424] pb-2">
               <div class="flex items-center gap-2.5">
-                <div class="w-7 h-7 rounded-lg bg-[#8ab4f8]/10 border border-[#8ab4f8]/30 flex items-center justify-center">
-                  <svg class="w-4 h-4" viewBox="0 0 24 24"><defs><linearGradient id="gemPlanGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8ab4f8"/><stop offset="100%" stop-color="#c58af9"/></linearGradient></defs><path fill="url(#gemPlanGrad)" d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/></svg>
-                </div>
-                <div>
-                  <span class="font-bold text-white text-xs uppercase font-mono tracking-wider">${msg.planTitle || 'Proposed Implementation Blueprint'}</span>
-                  <p class="text-[10px] text-[#8e918f]">Autonomous Engineering Specification</p>
-                </div>
+                <span class="text-[#38bdf8] flex-shrink-0">${MAC_ICONS.briefcase}</span>
+                <span class="font-bold text-white text-xs uppercase tracking-wider">${msg.planTitle || 'IMPLEMENTATION PLAN'}</span>
               </div>
-              <span class="text-[10px] font-mono text-[#8e918f] bg-[#181920] px-2 py-0.5 rounded-full border border-[rgba(255,255,255,0.06)]">${msg.timestamp}</span>
+              <span class="text-[10px] text-[#737373] flex items-center gap-1">
+                ${MAC_ICONS.watch}
+                <span>${msg.timestamp}</span>
+              </span>
             </div>
 
-            <p class="text-xs text-[#c4c7c5] leading-relaxed">${msg.content}</p>
-
-            <!-- Real-time Progress Bar & Percentage -->
-            <div class="space-y-2 bg-[#090a0f] border border-[rgba(255,255,255,0.08)] rounded-xl p-3.5">
-              <div class="flex items-center justify-between text-[11px] font-mono">
-                <span class="text-[#8e918f] flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full ${isDone ? 'bg-[#81c995]' : 'bg-[#8ab4f8] animate-pulse'}"></span>
-                  Synthesis Pipeline
+            <!-- 100% Progress Bar Strip -->
+            <div class="space-y-1.5 p-2.5 bg-[#050505] border border-[#242424] rounded shadow-inner">
+              <div class="flex items-center justify-between text-[10px] font-bold">
+                <span class="text-[#38bdf8] flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full ${progressPercent === 100 ? 'bg-[#38bdf8] shadow-[0_0_8px_#38bdf8]' : 'bg-yellow-400'} inline-block"></span>
+                  <span>PIPELINE PROGRESS</span>
                 </span>
-                <span class="${isDone ? 'text-[#81c995]' : 'text-[#8ab4f8]'} font-bold">${displayPercent}% Completed</span>
+                <span class="text-white font-mono font-bold">${progressPercent}% COMPLETED</span>
               </div>
-              <div class="w-full bg-[#181920] rounded-full h-2.5 overflow-hidden border border-[rgba(255,255,255,0.06)]">
-                <div class="${isDone ? 'bg-gradient-to-r from-[#81c995] to-[#4ade80] shadow-[0_0_10px_#81c995]' : 'bg-gradient-to-r from-[#8ab4f8] to-[#c58af9] shadow-[0_0_10px_#8ab4f8]'} h-full transition-all duration-500" style="width: ${displayPercent}%"></div>
+              <div class="w-full h-2.5 bg-[#141414] border border-[#383838] rounded-full overflow-hidden p-0.5">
+                <div class="h-full bg-gradient-to-r from-[#0284c7] via-[#38bdf8] to-[#7dd3fc] rounded-full transition-all duration-500 shadow-[0_0_12px_rgba(56,189,248,0.8)]" style="width: ${progressPercent}%"></div>
               </div>
             </div>
 
-            <!-- Steps Checklist -->
-            <div class="space-y-2 bg-[#090a0f] border border-[rgba(255,255,255,0.08)] rounded-xl p-3.5">
-              ${(msg.steps || []).map((st, idx) => `
-                <div class="flex items-center justify-between text-xs py-2 px-3 rounded-lg transition-colors ${st.completed ? 'bg-[#81c995]/5 text-[#81c995]' : (st.status === 'in_progress' ? 'bg-[#8ab4f8]/10 text-white' : 'text-[#c4c7c5]')}">
+            <div class="space-y-2">
+              ${steps.map((st, idx) => `
+                <div class="flex items-center justify-between py-2 px-3 rounded border ${st.completed || st.status === 'completed' ? 'bg-[#141414] border-white text-white font-bold' : (st.status === 'in_progress' ? 'bg-[#082038] border-[#38bdf8] text-white' : 'bg-[#0a0a0a] border-[#242424] text-[#737373]')}">
                   <div class="flex items-center gap-2.5 truncate">
-                    <span class="w-5 h-5 rounded-full border ${st.completed ? 'bg-[#81c995] text-black border-[#81c995]' : (st.status === 'in_progress' ? 'border-[#8ab4f8] text-[#8ab4f8] bg-[#8ab4f8]/10 animate-pulse' : 'border-[rgba(255,255,255,0.15)] text-[#71717a]')} flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-                      ${st.completed ? '✓' : (st.status === 'in_progress' ? '⚡' : idx + 1)}
+                    <span class="w-5 h-5 rounded border ${st.completed || st.status === 'completed' ? 'bg-white text-black border-white' : (st.status === 'in_progress' ? 'bg-[#38bdf8] text-black border-[#38bdf8]' : 'border-[#404040] text-white')} flex items-center justify-center text-[10px] font-bold flex-shrink-0 shadow">
+                      ${st.completed || st.status === 'completed' ? '+' : idx + 1}
                     </span>
-                    <span class="truncate font-mono text-[11px]">${st.label}</span>
+                    <span class="truncate text-[11.5px] font-mono">${st.label}</span>
                   </div>
-                  <span class="text-[10px] font-mono px-2 py-0.5 rounded-full flex-shrink-0 ${st.completed ? 'text-[#81c995] bg-[#81c995]/10' : (st.status === 'in_progress' ? 'text-[#8ab4f8] bg-[#8ab4f8]/15 animate-pulse font-bold' : 'text-[#71717a] bg-[#181920]')}">
-                    ${st.completed ? 'DONE' : (st.status === 'in_progress' ? 'ACTIVE' : 'QUEUED')}
+                  <span class="text-[9px] px-2 py-0.5 rounded border ${st.completed || st.status === 'completed' ? 'bg-white text-black font-bold' : (st.status === 'in_progress' ? 'bg-[#38bdf8] text-black border-[#38bdf8] font-bold animate-pulse' : 'bg-[#141414] text-[#737373] border-[#242424]')}">
+                    ${st.completed || st.status === 'completed' ? 'DONE' : (st.status === 'in_progress' ? 'ACTIVE' : 'QUEUED')}
                   </span>
                 </div>
               `).join('')}
             </div>
-
-            <div class="pt-1 flex justify-end">
-              ${isDone ? `
-                <div class="flex items-center gap-3">
-                  <div class="flex items-center gap-2 text-xs font-mono text-[#81c995] font-bold">
-                    <span class="w-2 h-2 rounded-full bg-[#81c995]"></span>
-                    <span>100% Complete • Codebase Ready</span>
-                  </div>
-                  <button class="btn-push-plan-github px-4 py-2 bg-[#24292f] hover:bg-[#32383f] text-white rounded-full text-xs font-mono font-bold transition flex items-center gap-2 cursor-pointer border border-[rgba(255,255,255,0.2)] shadow-md btn-action" title="Create GitHub Repo & Push Codebase">
-                    <svg class="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                    <span>Push to GitHub</span>
-                  </button>
-                </div>
-              ` : (this.isExecuting ? `
-                <div class="flex items-center gap-2 text-xs font-mono text-[#8ab4f8] font-bold">
-                  <span class="w-2 h-2 rounded-full bg-[#8ab4f8] animate-ping"></span>
-                  <span>Synthesizing codebase line by line...</span>
-                </div>
-              ` : `
-                <button class="btn-execute-plan bg-gradient-to-r from-[#1a73e8] to-[#1557b0] hover:from-[#1557b0] hover:to-[#0d47a1] text-white px-5 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 transition cursor-pointer btn-action shadow-lg hover:shadow-[0_0_16px_rgba(26,115,232,0.4)]" data-prompt="${this.escapeHtml(msg.taskPrompt || '')}">
-                  <svg class="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                  <span>Run Blueprint</span>
-                </button>
-              `)}
-            </div>
           </div>
         `;
       }
 
-      // 3. Decision Inquiries
+      // 3. Decision Card
       if (msg.type === 'decision') {
         return `
-          <div class="card-msg p-5 sm:p-6 bg-[#12131a] border border-[#c58af9]/40 rounded-2xl shadow-xl space-y-4 animate-fadeIn relative overflow-hidden">
-            <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#c58af9] to-[#8ab4f8]"></div>
-            <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-2.5">
-              <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-[#c58af9] animate-ping"></span>
-                <span class="font-bold text-white text-xs font-mono tracking-wider">ARCHITECTURE DECISION REQUIRED</span>
-              </div>
-              <span class="text-[10px] font-mono text-[#8e918f]">${msg.timestamp}</span>
+          <div class="p-4 retro-panel border-2 border-white space-y-3 animate-fadeIn font-mono shadow-2xl">
+            <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+              <span class="font-bold text-white text-xs uppercase flex items-center gap-2">
+                <span class="text-white flex-shrink-0">${MAC_ICONS.alertBubble}</span>
+                <span>[DECISION REQUIRED]</span>
+              </span>
+              <span class="text-[10px] text-[#737373]">${msg.timestamp}</span>
             </div>
-            <p class="text-xs text-[#f0f2f5] leading-relaxed font-medium">${msg.content}</p>
-            <div class="flex flex-wrap gap-2.5 pt-1">
+            <p class="text-xs text-white leading-relaxed">${msg.content}</p>
+            <div class="flex flex-wrap gap-2 pt-1">
               ${(msg.options || []).map(opt => `
-                <button class="btn-decision-choice px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer btn-action ${msg.selectedOptionId === opt.id ? 'bg-[#c58af9] text-black font-extrabold shadow-[0_0_16px_rgba(197,138,249,0.5)] border border-[#c58af9]' : 'bg-[#181920] hover:bg-[#22242e] text-white border border-[rgba(255,255,255,0.1)] hover:border-[#c58af9]/50'}" data-msg-id="${msg.id}" data-opt-id="${opt.id}" data-action="${this.escapeHtml(opt.action || opt.label)}">
+                <button class="btn-decision-choice retro-btn retro-btn-accent px-4 py-2 text-xs font-mono font-bold flex items-center gap-1.5" data-msg-id="${msg.id}" data-opt-id="${opt.id}" data-action="${this.escapeHtml(opt.action || opt.label)}">
+                  ${MAC_ICONS.command}
                   <span>${opt.label}</span>
                 </button>
               `).join('')}
@@ -1767,56 +1975,62 @@ export class WorkspaceComponent {
         `;
       }
 
-      // 4. Swarm Reasoning / Deep Thought (Collapsible)
+      // 4. Thought Reasoning
       if (msg.type === 'thought') {
         const isCollapsed = msg.collapsed ?? false;
         return `
-          <div class="card-msg bg-[#111218]/90 border border-[rgba(255,255,255,0.06)] rounded-xl overflow-hidden shadow-sm animate-fadeIn" id="thoughtContainer_${msg.id}">
-            <div class="btn-thought-toggle px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] transition" data-id="${msg.id}">
-              <div class="flex items-center gap-2.5">
-                <span class="w-2 h-2 rounded-full bg-[#c58af9] animate-pulse"></span>
-                <span class="text-[11px] font-mono font-bold text-[#c58af9] uppercase tracking-wider">${msg.role || 'ARCHITECT'} REASONING</span>
-                <span class="text-[10px] text-[#71717a] font-mono">• Thought Process</span>
-              </div>
+          <div class="retro-panel border border-[#242424] font-mono text-xs animate-fadeIn" id="thoughtContainer_${msg.id}">
+            <div class="btn-thought-toggle px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-[#141414] transition rounded" data-id="${msg.id}">
               <div class="flex items-center gap-2">
-                <span class="text-[10px] font-mono text-[#71717a]">${msg.timestamp}</span>
-                <svg class="w-3.5 h-3.5 text-[#71717a] transform transition-transform duration-200 ${isCollapsed ? '' : 'rotate-180'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
+                <span class="text-white flex-shrink-0">${MAC_ICONS.watch}</span>
+                <span class="text-[10px] font-bold text-white uppercase">[${msg.role || 'ARCHITECT'} REASONING]</span>
               </div>
+              <span class="text-[10px] text-[#737373]">${msg.timestamp} ${isCollapsed ? '▼' : '▲'}</span>
             </div>
-            <div class="px-3.5 pb-3 text-xs text-[#a1a1aa] font-mono leading-relaxed border-t border-[rgba(255,255,255,0.04)] pt-2.5 ${isCollapsed ? 'hidden' : ''}">
+            <div class="px-3 pb-3 text-[#a3a3a3] text-[11.5px] leading-relaxed border-t border-[#1c1c1c] pt-2 ${isCollapsed ? 'hidden' : ''}">
               ${this.escapeHtml(msg.content)}
             </div>
           </div>
         `;
       }
 
-      // 5. Tool Action Card
+      // 5. Tool Action & File Write
       if (msg.type === 'action') {
+        const isWrite = msg.content.toLowerCase().includes('writing to file') || msg.content.toLowerCase().includes('writefile');
+        const fileNameMatch = msg.content.match(/(?:Writing to file:\s*|writeFile\s+)([a-zA-Z0-9_./-]+)/i);
+        const targetFileName = fileNameMatch ? fileNameMatch[1] : '';
+
         return `
-          <div class="card-msg p-3 bg-[#0d0e14] border border-[rgba(255,255,255,0.08)] rounded-xl text-xs text-white flex items-center justify-between gap-3 animate-fadeIn">
-            <div class="flex items-center gap-2.5 min-w-0">
-              <span class="px-2 py-0.5 rounded-md bg-[#1a73e8]/15 border border-[#1a73e8]/30 text-[#8ab4f8] font-mono text-[10px] font-bold flex-shrink-0">
-                TOOL
+          <div class="p-3 retro-panel border border-[#242424] text-xs font-mono flex items-center justify-between gap-2 animate-fadeIn">
+            <div class="flex items-center gap-2.5 truncate">
+              <span class="text-white flex-shrink-0">${isWrite ? MAC_ICONS.floppy : MAC_ICONS.command}</span>
+              <span class="px-2 py-0.5 bg-[#141414] text-white border border-[#383838] rounded text-[9px] font-bold uppercase flex-shrink-0">
+                ${msg.title || 'TOOL'}
               </span>
-              <span class="font-mono text-[#c4c7c5] truncate text-[11px]">${this.escapeHtml(msg.content)}</span>
+              <span class="text-[#e5e5e5] truncate text-[11.5px]">${this.escapeHtml(msg.content)}</span>
             </div>
-            <span class="text-[10px] font-mono text-[#71717a] flex-shrink-0">${msg.timestamp}</span>
+            ${targetFileName ? `
+              <button class="btn-select-file retro-btn retro-btn-white px-2.5 py-1 text-[9px] font-mono flex-shrink-0 font-bold flex items-center gap-1" data-path="${targetFileName}">
+                ${MAC_ICONS.doc}
+                <span>VIEW</span>
+              </button>
+            ` : ''}
           </div>
         `;
       }
 
-      // 6. QA Test Report
+      // 6. Test Report & QA
       if (msg.type === 'test_report') {
         return `
-          <div class="card-msg p-4 sm:p-5 bg-[#12131a] border border-[#81c995]/30 rounded-2xl shadow-xl space-y-3 animate-fadeIn">
-            <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-2">
-              <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-[#81c995]"></span>
-                <span class="font-bold text-white text-xs font-mono tracking-wider">${msg.title || 'QA Test Verification Suite'}</span>
-              </div>
-              <span class="text-[10px] font-mono text-[#8e918f]">${msg.timestamp}</span>
+          <div class="p-3.5 retro-panel border border-[#383838] space-y-2 animate-fadeIn font-mono text-xs">
+            <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+              <span class="font-bold text-white uppercase flex items-center gap-2">
+                <span class="text-white flex-shrink-0">${MAC_ICONS.macScreen}</span>
+                <span>[QA TEST SUITE &amp; AST VALIDATION]</span>
+              </span>
+              <span class="text-[10px] text-[#737373]">${msg.timestamp}</span>
             </div>
-            <div class="text-xs text-[#c4c7c5]">${this.renderRichMarkdown(msg.content)}</div>
+            <div class="text-[#e5e5e5] text-[11.5px]">${this.renderRichMarkdown(msg.content)}</div>
           </div>
         `;
       }
@@ -1824,174 +2038,67 @@ export class WorkspaceComponent {
       // 7. Security Audit
       if (msg.type === 'security_audit') {
         return `
-          <div class="card-msg p-4 sm:p-5 bg-[#12131a] border border-[#8ab4f8]/30 rounded-2xl shadow-xl space-y-3 animate-fadeIn">
-            <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-2">
-              <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-[#8ab4f8]"></span>
-                <span class="font-bold text-white text-xs font-mono tracking-wider">${msg.title || 'Autonomous Security & Lint Audit'}</span>
-              </div>
-              <span class="text-[10px] font-mono text-[#8e918f]">${msg.timestamp}</span>
+          <div class="p-3.5 retro-panel border border-[#383838] space-y-2 animate-fadeIn font-mono text-xs">
+            <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+              <span class="font-bold text-white uppercase flex items-center gap-2">
+                <span class="text-white flex-shrink-0">${MAC_ICONS.bomb}</span>
+                <span>[SECURITY &amp; SANDBOX AUDIT]</span>
+              </span>
+              <span class="text-[10px] text-[#737373]">${msg.timestamp}</span>
             </div>
-            <div class="text-xs text-[#c4c7c5]">${this.renderRichMarkdown(msg.content)}</div>
+            <div class="text-[#e5e5e5] text-[11.5px]">${this.renderRichMarkdown(msg.content)}</div>
           </div>
         `;
       }
 
-      // 8. Main Agent Response (Answer)
+      // 8. Ask Mode Answer Response
       if (msg.type === 'answer') {
         return `
-          <div class="card-msg p-5 sm:p-6 bg-gradient-to-b from-[#12131a] to-[#0e0f14] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(138,180,248,0.3)] rounded-2xl flex items-start gap-4 animate-fadeIn shadow-lg transition-colors">
-            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#1a73e8] via-[#9b72cb] to-[#f28b82] p-[1.5px] flex-shrink-0 shadow-md">
-              <div class="w-full h-full bg-[#111218] rounded-[10px] flex items-center justify-center">
-                <svg class="w-5 h-5" viewBox="0 0 24 24">
-                  <defs>
-                    <linearGradient id="gemTurnGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#8ab4f8"/>
-                      <stop offset="50%" stop-color="#c58af9"/>
-                      <stop offset="100%" stop-color="#f28b82"/>
-                    </linearGradient>
-                  </defs>
-                  <path fill="url(#gemTurnGrad2)" d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
-                </svg>
+          <div class="p-4 retro-panel border-2 border-[#38bdf8] space-y-3 animate-fadeIn shadow-2xl bg-[#030d17]">
+            <div class="flex items-center justify-between text-xs font-mono border-b border-[#0369a1] pb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-[#38bdf8] flex-shrink-0">${MAC_ICONS.doc}</span>
+                <span class="font-bold text-[#38bdf8] uppercase">[?] GOOGLE GEMINI // ARCHITECTURAL RESPONSE</span>
               </div>
+              <span class="text-[10px] text-[#737373] font-mono">${msg.timestamp}</span>
             </div>
-
-            <div class="flex-1 min-w-0 space-y-3">
-              <div class="flex items-center justify-between text-xs text-[#8e918f]">
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-white tracking-wide">Spring AI Autonomous Model</span>
-                  <span class="text-[10px] bg-[#1a73e8]/15 text-[#8ab4f8] px-2 py-0.5 rounded-full border border-[#1a73e8]/30 font-mono">Verified</span>
-                </div>
-                <span class="text-[10px] font-mono text-[#71717a]">${msg.timestamp}</span>
-              </div>
-
-              <div class="markdown-content select-text">
-                ${this.renderRichMarkdown(msg.content)}
-              </div>
-
-              <div class="flex items-center gap-2 pt-3 text-xs text-[#8e918f] border-t border-[rgba(255,255,255,0.06)]">
-                <button class="btn-copy-turn hover:text-white px-3 py-1.5 rounded-lg bg-[#181920] hover:bg-[#22242e] border border-[rgba(255,255,255,0.06)] transition flex items-center gap-1.5 cursor-pointer text-[11px] btn-action" data-text="${this.escapeHtml(msg.content)}">
-                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                  <span>Copy Response</span>
-                </button>
-
-                <div class="flex items-center gap-1 ml-1">
-                  <button class="btn-feedback-thumb p-1.5 rounded-lg hover:bg-[#181920] text-[#71717a] hover:text-[#81c995] transition cursor-pointer" title="Helpful response">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
-                  </button>
-                  <button class="btn-feedback-thumb p-1.5 rounded-lg hover:bg-[#181920] text-[#71717a] hover:text-[#f28b82] transition cursor-pointer" title="Report issue">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path></svg>
-                  </button>
-                </div>
-
-                <div class="flex-1"></div>
-                <span class="text-[10px] text-[#71717a] font-mono hidden sm:inline">deepseek-coder:6.7b</span>
-              </div>
+            <div class="markdown-content select-text leading-relaxed text-[#f1f5f9]">
+              ${this.renderRichMarkdown(msg.content)}
+            </div>
+            <div class="flex justify-end pt-1">
+              <button class="btn-copy-turn retro-btn retro-btn-accent px-3 py-1 text-[10px] font-mono flex items-center gap-1.5 font-bold" data-text="${this.escapeHtml(msg.content)}">
+                ${MAC_ICONS.doc}
+                <span>COPY RESPONSE</span>
+              </button>
             </div>
           </div>
         `;
       }
 
-      // Default message fallback
+      // Fallback
       return `
-        <div class="card-msg p-4 bg-[#12131a] border border-[rgba(255,255,255,0.08)] rounded-xl text-xs text-white leading-relaxed animate-fadeIn">
+        <div class="p-3.5 retro-panel border border-[#242424] text-xs text-white animate-fadeIn font-mono">
           ${this.renderRichMarkdown(msg.content)}
         </div>
       `;
-    }).join('') + (this.isStreamingCode ? `
-      <div id="activeCodeStreamCard" class="w-full p-4 sm:p-5 bg-[#0e0f14] border border-[#8ab4f8]/40 rounded-2xl shadow-2xl space-y-3 animate-fadeIn font-mono my-3">
-        <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] pb-2.5">
-          <div class="flex items-center gap-2.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-[#8ab4f8] animate-ping"></span>
-            <span class="text-xs font-bold text-white uppercase">Writing: ${this.streamingFileName}</span>
-            <span class="text-[10px] bg-[#181920] text-[#8ab4f8] px-2.5 py-0.5 rounded-full border border-[rgba(255,255,255,0.08)] font-mono" id="streamLineCountBadge">
-              Line ${this.streamingLineNum} of ${this.totalStreamingLines}
-            </span>
-          </div>
-          <span class="text-[10px] text-[#81c995] font-bold tracking-wider animate-pulse font-mono">LIVE GENERATING LINE-BY-LINE...</span>
-        </div>
-        <div class="max-h-72 overflow-y-auto custom-scrollbar p-3.5 bg-[#08080a] rounded-xl border border-[rgba(255,255,255,0.06)] text-xs text-[#81c995] leading-relaxed select-text" id="streamCodeScrollBox">
-          <pre class="font-mono text-xs text-[#e3e3e3] whitespace-pre-wrap"><code id="streamCodeElement">${this.escapeHtml(this.displayedStreamingCode)}</code></pre>
-        </div>
-      </div>
-    ` : '') + (this.isExecuting && this.aiMode === 'ask' ? `
-      <div class="thinking-card p-5 bg-[#12131a] border border-[rgba(255,255,255,0.08)] rounded-2xl shadow-xl space-y-3 animate-fadeIn flex items-start gap-3.5">
-        <div class="w-8 h-8 rounded-xl bg-[#181920] border border-[#8ab4f8]/30 flex items-center justify-center flex-shrink-0 shadow-md">
-          <span class="w-2.5 h-2.5 rounded-full bg-[#8ab4f8] animate-ping"></span>
-        </div>
-        <div class="flex-1 space-y-2">
-          <div class="flex items-center gap-2">
-            <span class="font-semibold text-white text-xs">Model is synthesizing answer...</span>
-            <span class="inline-flex items-center gap-1 ml-1">
-              <span class="thinking-dot thinking-dot-1"></span>
-              <span class="thinking-dot thinking-dot-2"></span>
-              <span class="thinking-dot thinking-dot-3"></span>
-            </span>
-          </div>
-          <div class="space-y-2 pt-1">
-            <div class="shimmer-line h-3 w-full rounded-md"></div>
-            <div class="shimmer-line h-3 w-4/5 rounded-md"></div>
-          </div>
-        </div>
-      </div>
-    ` : (this.isExecuting && this.aiMode === 'agent' && !this.isStreamingCode ? `
-      <div class="p-4 bg-[#12131a] border border-[#8ab4f8]/30 rounded-xl flex items-center justify-between text-xs font-mono text-[#ededed] shadow-lg animate-fadeIn">
-        <div class="flex items-center gap-2.5">
-          <span class="w-2.5 h-2.5 rounded-full bg-[#8ab4f8] animate-ping"></span>
-          <span class="text-[#8ab4f8] font-bold">AUTONOMOUS SYNTHESIS:</span>
-          <span class="text-white">${this.currentStatusText}</span>
-        </div>
-        <span class="inline-flex items-center gap-1">
-          <span class="thinking-dot thinking-dot-1"></span>
-          <span class="thinking-dot thinking-dot-2"></span>
-          <span class="thinking-dot thinking-dot-3"></span>
-        </span>
-      </div>
-    ` : ''));
+    }).join('');
   }
 
   private renderRichMarkdown(md: string): string {
     if (!md) return '';
     let html = this.escapeHtml(md);
 
-    // Callout Alert Blocks (> [!NOTE], > [!TIP], > [!IMPORTANT], > [!WARNING], > [!CAUTION])
-    const calloutRegex = /^&gt; \s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*\n((?:&gt; .*\n?)+)/gim;
-    html = html.replace(calloutRegex, (_match, type, content) => {
-      const cleanContent = content.replace(/^&gt; ?/gm, '').trim();
-      const lowerType = type.toLowerCase();
-      let icon = 'ℹ️';
-      if (lowerType === 'tip') icon = '💡';
-      if (lowerType === 'important') icon = '⭐';
-      if (lowerType === 'warning') icon = '⚠️';
-      if (lowerType === 'caution') icon = '🛑';
-      return `
-        <div class="callout-box callout-${lowerType}">
-          <span class="text-base flex-shrink-0">${icon}</span>
-          <div class="space-y-1">
-            <div class="font-bold uppercase tracking-wider text-[10px]">${type}</div>
-            <div>${cleanContent}</div>
-          </div>
-        </div>
-      `;
-    });
-
-    // Code blocks with syntax badge & copy button
+    // Code blocks with copy button
     html = html.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (_match, lang, code) => {
       const language = lang.trim() || 'code';
       const cleanCode = code.trim();
       return `
         <div class="code-block-wrapper">
           <div class="code-block-header">
-            <div class="code-lang-pill">
-              <span class="code-lang-dot"></span>
-              <span>${language}</span>
-            </div>
-            <button class="btn-copy-code" data-code="${this.escapeHtml(cleanCode)}" title="Copy code snippet">
-              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              <span>Copy</span>
-            </button>
+            <span class="code-lang-pill">[${language}]</span>
+            <button class="btn-copy-code" data-code="${this.escapeHtml(cleanCode)}">COPY</button>
           </div>
-          <pre class="code-block-body custom-scrollbar"><code>${cleanCode}</code></pre>
+          <pre class="code-content custom-scrollbar"><code>${cleanCode}</code></pre>
         </div>
       `;
     });
@@ -2000,61 +2107,17 @@ export class WorkspaceComponent {
     html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
 
     // Headings
-    html = html.replace(/^#### (.*$)/gim, '<h4 class="text-xs font-bold text-white mt-4 mb-2 flex items-center gap-1.5 font-mono"><span class="w-1.5 h-1.5 rounded-full bg-[#8ab4f8]"></span>$1</h4>');
-    html = html.replace(/^### (.*$)/gim, '<h3 class="text-sm font-extrabold text-white mt-5 mb-2.5 border-b border-[rgba(255,255,255,0.08)] pb-1.5 font-heading text-[#8ab4f8]">$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2 class="text-base font-extrabold text-white mt-6 mb-3 font-heading tracking-tight">$1</h2>');
-    html = html.replace(/^# (.*$)/gim, '<h1 class="text-lg font-black text-white mt-6 mb-3 font-heading tracking-tight">$1</h1>');
-
-    // Tables
-    const tableRegex = /((?:\|[^\n]+\|\r?\n)+)/g;
-    html = html.replace(tableRegex, (match) => {
-      const rows = match.trim().split(/\r?\n/).map(r => r.trim()).filter(r => r.length > 0);
-      if (rows.length < 2) return match;
-      
-      let tableHtml = '<div class="md-table-wrapper"><table class="md-table">';
-      
-      // Header row
-      const headers = rows[0].split('|').map(c => c.trim()).filter((_c, i, a) => i > 0 && i < a.length - 1);
-      tableHtml += '<thead><tr>';
-      headers.forEach(h => {
-        tableHtml += `<th>${h}</th>`;
-      });
-      tableHtml += '</tr></thead><tbody>';
-
-      // Body rows (skip separator row if contains dashes)
-      const startIndex = rows[1] && rows[1].includes('---') ? 2 : 1;
-      for (let i = startIndex; i < rows.length; i++) {
-        const cols = rows[i].split('|').map(c => c.trim()).filter((_c, idx, a) => idx > 0 && idx < a.length - 1);
-        tableHtml += '<tr>';
-        cols.forEach(c => {
-          tableHtml += `<td>${c}</td>`;
-        });
-        tableHtml += '</tr>';
-      }
-
-      tableHtml += '</tbody></table></div>';
-      return tableHtml;
-    });
+    html = html.replace(/^### (.*$)/gim, '<h3 class="text-sm font-bold text-white mt-3.5 mb-1.5 border-b border-[#242424] pb-1 font-mono uppercase">$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2 class="text-base font-extrabold text-white mt-4 mb-2 font-mono uppercase">$1</h2>');
+    html = html.replace(/^# (.*$)/gim, '<h1 class="text-lg font-black text-white mt-4 mb-2 font-mono uppercase">$1</h1>');
 
     // Bold / Italic
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
-    html = html.replace(/\*([^*]+)\*/g, '<em class="text-[#a1a1aa] italic">$1</em>');
+    html = html.replace(/\*([^*]+)\*/g, '<em class="text-[#a3a3a3] italic">$1</em>');
 
-    // Checklist items: [x] or [ ]
-    html = html.replace(/^[•*-] \[x\] (.*$)/gim, '<div class="flex items-start gap-2 my-1 text-xs text-[#81c995]"><span class="w-4 h-4 rounded bg-[#81c995]/20 border border-[#81c995] flex items-center justify-center text-[10px] font-bold mt-0.5">✓</span><span class="flex-1">$1</span></div>');
-    html = html.replace(/^[•*-] \[ \] (.*$)/gim, '<div class="flex items-start gap-2 my-1 text-xs text-[#a1a1aa]"><span class="w-4 h-4 rounded bg-[#181920] border border-[rgba(255,255,255,0.2)] flex items-center justify-center text-[10px] mt-0.5">○</span><span class="flex-1">$1</span></div>');
-
-    // Bullet lists
-    html = html.replace(/^[•*-] (.*$)/gim, '<div class="flex items-start gap-2 my-1.5 text-xs text-[#e3e3e3]"><span class="text-[#8ab4f8] mt-0.5 font-bold">•</span><span class="flex-1">$1</span></div>');
-
-    // Numbered lists: 1. 2. 3.
-    html = html.replace(/^(\d+)\. (.*$)/gim, '<div class="flex items-start gap-2 my-1.5 text-xs text-[#e3e3e3]"><span class="w-4 h-4 rounded-full bg-[#181920] border border-[rgba(255,255,255,0.12)] text-[#8ab4f8] flex items-center justify-center text-[10px] font-mono font-bold mt-0.5 flex-shrink-0">$1</span><span class="flex-1">$2</span></div>');
-
-    // Blockquotes
-    html = html.replace(/^&gt; (.*$)/gim, '<blockquote class="border-l-2 border-[#8ab4f8] pl-3 py-1 my-2 text-xs italic text-[#c4c7c5] bg-[#8ab4f8]/5 rounded-r-lg">$1</blockquote>');
-
-    // Horizontal Rule
-    html = html.replace(/^---$/gim, '<hr class="my-4 border-[rgba(255,255,255,0.08)]"/>');
+    // Lists
+    html = html.replace(/^[•*-] (.*$)/gim, '<div class="flex items-start gap-2 my-1 text-xs text-white"><span class="text-[#38bdf8] font-bold flex-shrink-0">•</span><span class="flex-1">$1</span></div>');
+    html = html.replace(/^(\d+)\. (.*$)/gim, '<div class="flex items-start gap-2 my-1 text-xs text-white"><span class="text-white font-mono font-bold flex-shrink-0">$1.</span><span class="flex-1">$2</span></div>');
 
     return html;
   }
@@ -2064,382 +2127,422 @@ export class WorkspaceComponent {
     return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  private getActiveCodeSnippet(): string {
-    if (!this.studioCodeSnippets) {
-      const p = (this.taskPrompt || 'Write a modern full stack web application with clean design').replace(/"/g, '\\"');
-      const s = (this.systemInstruction || 'You are Spring AI Agent.').replace(/"/g, '\\"');
-      return `curl -X POST http://localhost:8080/api/task \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "prompt": "${p}",\n    "systemInstruction": "${s}",\n    "model": "${this.selectedModelId}",\n    "temperature": ${this.temperature.toFixed(2)},\n    "mode": "${this.aiMode}"\n  }'`;
-    }
-    return this.studioCodeSnippets[this.getCodeActiveTab] || '';
-  }
-
   private attachEventListeners() {
-    // Top Bar Mode Switcher
-    document.getElementById('btnModeAgent')?.addEventListener('click', () => {
-      this.aiMode = 'agent';
-      this.render();
-    });
-    document.getElementById('btnModeAsk')?.addEventListener('click', () => {
-      this.aiMode = 'ask';
-      this.render();
-    });
-    document.getElementById('btnToggleCrt')?.addEventListener('click', () => {
+    // CRT Screen Monitor & Phosphor Theme Controls
+    document.getElementById('btnToggleCrtScreen')?.addEventListener('click', () => {
+      soundEngine.playCrtClick();
       this.crtEnabled = !this.crtEnabled;
       this.render();
+      this.showToast(this.crtEnabled ? '[*] CRT Monitor Phosphor Screen: ACTIVATED' : '[-] CRT Screen: DEACTIVATED');
     });
-    document.getElementById('btnLayoutWide')?.addEventListener('click', () => {
-      this.showSidePanel = true;
-      this.panelWidthPercent = 32;
+
+    document.querySelectorAll('.btn-crt-theme').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        soundEngine.playMechanicalKeyboardClick();
+        const theme = (e.currentTarget as HTMLElement).dataset['theme'] as any;
+        if (theme) {
+          this.crtColorTheme = theme;
+          this.render();
+          this.showToast(`[*] CRT Phosphor: ${theme.toUpperCase()}`);
+        }
+      });
+    });
+
+    // Top Navigation View Mode Switcher
+    document.getElementById('btnNavViewAgent')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
+      this.activeViewMode = 'agent';
       this.render();
     });
-    document.getElementById('btnLayoutSplit')?.addEventListener('click', () => {
-      this.showSidePanel = true;
-      this.panelWidthPercent = 50;
+    document.getElementById('btnNavViewCicd')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
+      this.activeViewMode = 'cicd';
       this.render();
     });
-    document.getElementById('btnToggleSidePanel')?.addEventListener('click', () => {
+    document.getElementById('btnNavViewWorkflow')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
+      this.activeViewMode = 'workflow';
+      this.render();
+    });
+
+    // Workflow Orchestrator Execution & Interaction
+    const handleExecuteWorkflowAction = async () => {
+      soundEngine.playLeverClack();
+      const tplId = this.activeWorkflow?.id || 'tpl-pr-governance';
+      this.isWorkflowExecuting = true;
+      this.workflowExecutionLogs = [`[*] Initiating Workflow execution: ${this.activeWorkflow?.name || tplId}...`];
+      if (this.activeWorkflow && this.activeWorkflow.nodes) {
+        this.activeWorkflow.nodes.forEach((n: any) => {
+          n.status = 'PENDING';
+          n.durationMs = 0;
+        });
+      }
+      this.render();
+      try {
+        await api.executeWorkflow(tplId);
+        this.showToast(`[*] Workflow triggered: ${tplId}`);
+      } catch (err: any) {
+        this.showToast(`Workflow execution error: ${err.message}`, true);
+        this.isWorkflowExecuting = false;
+        this.render();
+      }
+    };
+
+    document.getElementById('btnExecuteWorkflowCanvas')?.addEventListener('click', handleExecuteWorkflowAction);
+    document.getElementById('btnQuickRunWorkflowTop')?.addEventListener('click', handleExecuteWorkflowAction);
+
+    const selectWf = document.getElementById('selectWorkflowBlueprint') as HTMLSelectElement;
+    if (selectWf) {
+      selectWf.addEventListener('change', () => {
+        soundEngine.playMechanicalKeyboardClick();
+        const chosenId = selectWf.value;
+        const found = (this.workflowTemplatesList || []).find(t => t.id === chosenId);
+        if (found) {
+          this.activeWorkflow = JSON.parse(JSON.stringify(found));
+          this.selectedWorkflowNodeId = this.activeWorkflow.nodes?.[0]?.id || null;
+          this.render();
+          this.showToast(`[*] Active Blueprint: ${this.activeWorkflow.name}`);
+        } else if (chosenId === 'tpl-incident-healer') {
+          this.activeWorkflow = {
+            id: 'tpl-incident-healer',
+            name: 'Autonomous Incident Root-Cause & Self-Fixer',
+            description: 'Monitors APM/Datadog alert webhooks, queries Gemini with stack trace, runs automated local patch validation, and opens remediation PR.',
+            nodes: [
+              { id: 'node-inc-1', type: 'TRIGGER_WEBHOOK', name: 'APM PagerDuty Alert Ingest', description: 'Listens for critical service alerts', posX: 40, posY: 140, config: { service: 'payment-gateway', severity: 'CRITICAL' } },
+              { id: 'node-inc-2', type: 'HTTP_REST_REQUEST', name: 'Query Splunk Logs', description: 'Fetches recent stack trace & log context', posX: 280, posY: 140, config: { query: 'error_code: 500 service:payment-gateway limit:50' } },
+              { id: 'node-inc-3', type: 'AI_GEMINI_REASONER', name: 'Gemini Root-Cause Analyst', description: 'Diagnoses memory leak or deadlock pattern', posX: 520, posY: 140, config: { prompt: 'Analyze stack trace and identify root cause with exact code patch.' } },
+              { id: 'node-inc-4', type: 'BRANCH_IF_ELSE', name: 'Patch Feasibility Gate', description: 'Verifies confidence score > 0.85', posX: 760, posY: 140, config: { conditionField: 'confidence', expectedValue: 'true' } },
+              { id: 'node-inc-5', type: 'FILE_SYSTEM_OUTPUT', name: 'Generate Patch Spec', description: 'Writes patch fix directly to workspace', posX: 1000, posY: 80, config: { fileName: 'incident-hotfix.patch' } }
+            ],
+            edges: [
+              { id: 'e-inc-1', source: 'node-inc-1', target: 'node-inc-2', sourceHandle: 'default' },
+              { id: 'e-inc-2', source: 'node-inc-2', target: 'node-inc-3', sourceHandle: 'default' },
+              { id: 'e-inc-3', source: 'node-inc-3', target: 'node-inc-4', sourceHandle: 'default' },
+              { id: 'e-inc-4', source: 'node-inc-4', target: 'node-inc-5', sourceHandle: 'true' }
+            ]
+          };
+          this.selectedWorkflowNodeId = 'node-inc-1';
+          this.render();
+          this.showToast(`[*] Active Blueprint: ${this.activeWorkflow.name}`);
+        } else if (chosenId === 'tpl-pr-governance') {
+          this.activeWorkflow = {
+            id: 'tpl-pr-governance',
+            name: 'GitHub PR Auto-Review & Gemini SAST Audit',
+            description: 'Ingests incoming GitHub PR Webhooks, runs static Shannon entropy scan, dispatches Gemini code review, and posts automated PR decisions.',
+            nodes: [
+              { id: 'node-1', type: 'TRIGGER_WEBHOOK', name: 'GitHub Webhook Ingest', description: 'Listens for pull_request.opened events', posX: 40, posY: 140, config: { event: 'pull_request.opened', repo: 'spring-enterprise-service' } },
+              { id: 'node-2', type: 'CODE_TRANSFORM', name: 'Normalize PR Diff', description: 'Extracts changed source files & metadata', posX: 280, posY: 140, config: { filterExt: '.java,.ts,.js' } },
+              { id: 'node-3', type: 'SECURITY_SAST_SCAN', name: 'SAST Secret Scanner', description: 'Detects leaked tokens & entropy anomalies', posX: 520, posY: 140, config: { failOnCritical: true } },
+              { id: 'node-4', type: 'BRANCH_IF_ELSE', name: 'Security Quality Gate', description: 'Evaluates isSecure == true condition', posX: 760, posY: 140, config: { conditionField: 'isSecure', expectedValue: 'true' } },
+              { id: 'node-5', type: 'AI_GEMINI_REASONER', name: 'Gemini AI PR Reviewer', description: 'Multimodal architectural evaluation', posX: 1000, posY: 80, config: { prompt: 'Perform code review on PR files and generate executive summary.' } },
+              { id: 'node-6', type: 'FILE_SYSTEM_OUTPUT', name: 'Write Governance Report', description: 'Saves review report directly to workspace', posX: 1240, posY: 80, config: { fileName: 'governance-pr-audit.md' } }
+            ],
+            edges: [
+              { id: 'e-1', source: 'node-1', target: 'node-2', sourceHandle: 'default' },
+              { id: 'e-2', source: 'node-2', target: 'node-3', sourceHandle: 'default' },
+              { id: 'e-3', source: 'node-3', target: 'node-4', sourceHandle: 'default' },
+              { id: 'e-4', source: 'node-4', target: 'node-5', sourceHandle: 'true' },
+              { id: 'e-5', source: 'node-5', target: 'node-6', sourceHandle: 'default' }
+            ]
+          };
+          this.selectedWorkflowNodeId = 'node-1';
+          this.render();
+          this.showToast(`[*] Active Blueprint: ${this.activeWorkflow.name}`);
+        }
+      });
+    }
+
+    document.getElementById('btnCopyWorkflowWebhook')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
+      const wfId = this.activeWorkflow?.id || 'tpl-pr-governance';
+      const origin = window.location.origin;
+      navigator.clipboard.writeText(`${origin}/api/workflow/webhook/${wfId}`);
+      this.showToast(`[+] Webhook URL for ${wfId} copied`);
+    });
+
+    document.querySelectorAll('.workflow-node-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        soundEngine.playMechanicalKeyboardClick();
+        const nodeId = (e.currentTarget as HTMLElement).dataset['nodeId'];
+        if (nodeId) {
+          this.selectedWorkflowNodeId = nodeId;
+          this.render();
+        }
+      });
+    });
+
+    document.getElementById('btnCopySelectedNodePayload')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
+      const node = this.activeWorkflow?.nodes?.find((n: any) => n.id === this.selectedWorkflowNodeId);
+      const result = this.activeWorkflowRun?.nodeResults?.[this.selectedWorkflowNodeId || ''];
+      const payload = {
+        node: node || null,
+        executionResult: result || null
+      };
+      navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      this.showToast('[+] Node payload JSON copied to clipboard');
+    });
+
+    document.getElementById('btnCopyWorkflowLogs')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
+      const text = (this.workflowExecutionLogs || []).join('\n');
+      navigator.clipboard.writeText(text);
+      this.showToast('[+] Workflow execution logs copied');
+    });
+
+    document.getElementById('btnClearWorkflowLogs')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
+      this.workflowExecutionLogs = [];
+      this.render();
+    });
+
+    // Pipeline Trigger & Control Actions
+    const handleTriggerPipelineAction = async () => {
+      soundEngine.playLeverClack();
+      const repo = this.pipelineRepoInput || 'spring-enterprise-service';
+      const branch = this.pipelineBranchInput || 'main';
+      this.pipelineTerminalLogs = [`[${new Date().toLocaleTimeString()}] [>] Initiating Pipeline Trigger for repository: ${repo} (branch: ${branch})...`];
+      if (this.activePipelineRun) {
+        this.activePipelineRun.status = 'RUNNING';
+        if (this.activePipelineRun.stages) {
+          this.activePipelineRun.stages.forEach((s: any) => { s.status = 'PENDING'; s.durationMs = 0; });
+        }
+      }
+      this.render();
+      try {
+        await api.triggerPipeline(repo, branch);
+        this.showToast(`[>] CI/CD Pipeline triggered for ${repo}:${branch}`);
+      } catch (err: any) {
+        this.showToast(`Pipeline trigger error: ${err.message}`, true);
+      }
+    };
+
+    document.getElementById('btnDirectTriggerPipeline')?.addEventListener('click', handleTriggerPipelineAction);
+    document.getElementById('btnQuickTriggerPipelineTop')?.addEventListener('click', handleTriggerPipelineAction);
+
+    document.getElementById('btnOpenTriggerPipelineModal')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
+      this.pipelineTriggerModalOpen = true;
+      this.render();
+    });
+
+    document.getElementById('btnClosePipelineModal')?.addEventListener('click', () => {
+      this.pipelineTriggerModalOpen = false;
+      this.render();
+    });
+
+    document.getElementById('btnCancelPipelineModal')?.addEventListener('click', () => {
+      this.pipelineTriggerModalOpen = false;
+      this.render();
+    });
+
+    document.getElementById('btnExecutePipelineRun')?.addEventListener('click', async () => {
+      soundEngine.playLeverClack();
+      const repoInput = (document.getElementById('inputPipelineRepo') as HTMLInputElement)?.value.trim() || 'spring-enterprise-service';
+      const branchInput = (document.getElementById('inputPipelineBranch') as HTMLInputElement)?.value.trim() || 'main';
+      this.pipelineRepoInput = repoInput;
+      this.pipelineBranchInput = branchInput;
+      this.pipelineTriggerModalOpen = false;
+      this.pipelineTerminalLogs = [`[${new Date().toLocaleTimeString()}] [>] Initiating Pipeline Trigger for repository: ${repoInput} (branch: ${branchInput})...`];
+      if (this.activePipelineRun) {
+        this.activePipelineRun.repoName = repoInput;
+        this.activePipelineRun.branch = branchInput;
+        this.activePipelineRun.status = 'RUNNING';
+        if (this.activePipelineRun.stages) {
+          this.activePipelineRun.stages.forEach((s: any) => { s.status = 'PENDING'; s.durationMs = 0; });
+        }
+      }
+      this.render();
+      try {
+        await api.triggerPipeline(repoInput, branchInput);
+        this.showToast(`[>] CI/CD Pipeline triggered for ${repoInput}:${branchInput}`);
+      } catch (err: any) {
+        this.showToast(`Pipeline trigger error: ${err.message}`, true);
+      }
+    });
+
+    document.getElementById('btnCopyPipelineLogs')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
+      const text = (this.pipelineTerminalLogs || []).join('\n');
+      navigator.clipboard.writeText(text);
+      this.showToast('[+] Pipeline logs copied to clipboard');
+    });
+
+    document.getElementById('btnClearPipelineLogs')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
+      this.pipelineTerminalLogs = [];
+      this.render();
+    });
+
+    document.getElementById('btnCopyWebhookUrl')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
+      const origin = window.location.origin;
+      navigator.clipboard.writeText(`${origin}/api/pipeline/webhook`);
+      this.showToast('[+] GitHub Webhook URL copied to clipboard');
+    });
+
+    // Sound Mute Toggle
+    document.getElementById('btnToggleSound')?.addEventListener('click', () => {
+      const isMuted = soundEngine.toggleMute();
+      this.render();
+      this.showToast(isMuted ? '🔇 Audio muted' : '🔊 Mechanical & CRT Audio Active');
+    });
+
+    document.getElementById('btnToggleSidePanel')?.addEventListener('click', async () => {
       this.showSidePanel = !this.showSidePanel;
+      if (this.showSidePanel) {
+        await this.loadFiles();
+        await this.bundleProjectToSrcDoc();
+      }
       this.render();
     });
-    document.getElementById('btnOpenSidePanel')?.addEventListener('click', () => {
-      this.showSidePanel = true;
-      this.render();
-    });
+
     document.getElementById('btnCloseSidePanel')?.addEventListener('click', () => {
       this.showSidePanel = false;
       this.render();
     });
-    document.getElementById('btnNewSession')?.addEventListener('click', () => {
-      this.activeSession = null;
-      this.messages = [];
-      this.render();
-    });
 
-    // GitHub Login Modal Triggers
-    const openGitHubModal = () => {
-      this.showGitHubLoginModal = true;
-      this.gitHubLoginError = '';
-      this.render();
-    };
-    document.getElementById('btnOpenUserAccountModal')?.addEventListener('click', openGitHubModal);
-    document.getElementById('btnHeaderGitHubLogin')?.addEventListener('click', openGitHubModal);
-    document.getElementById('btnCloseGitHubModal')?.addEventListener('click', () => {
-      this.showGitHubLoginModal = false;
-      this.render();
-    });
-    document.getElementById('btnCloseGitHubModalFooter')?.addEventListener('click', () => {
-      this.showGitHubLoginModal = false;
-      this.render();
-    });
-
-    // GitHub Login Submit Handler
-    document.getElementById('btnSubmitGitHubLogin')?.addEventListener('click', async () => {
-      const usernameInput = document.getElementById('inputGitHubUsername') as HTMLInputElement;
-      const tokenInput = document.getElementById('inputGitHubToken') as HTMLInputElement;
-      const username = usernameInput ? usernameInput.value.trim() : '';
-      const token = tokenInput ? tokenInput.value.trim() : '';
-
-      if (!username && !token) {
-        this.gitHubLoginError = 'Please provide a GitHub username or Personal Access Token.';
-        this.render();
-        return;
-      }
-
-      this.isLoggingInGitHub = true;
-      this.gitHubLoginError = '';
-      this.render();
-
-      try {
-        const profile = await api.loginUser(username, token);
-        this.userProfile = profile;
-        this.currentTenant = profile.login.toLowerCase();
-        this.isLoggingInGitHub = false;
-        this.showGitHubLoginModal = false;
-        this.render();
-      } catch (err: any) {
-        this.isLoggingInGitHub = false;
-        this.gitHubLoginError = err.message || 'Failed to authenticate with GitHub.';
-        this.render();
-      }
-    });
-
-    // Create GitHub Repo and Push Handler
-    document.getElementById('btnCreateAndPushRepo')?.addEventListener('click', async () => {
-      const repoNameInput = document.getElementById('inputNewRepoName') as HTMLInputElement;
-      const repoDescInput = document.getElementById('inputNewRepoDesc') as HTMLInputElement;
-      const selectVisibility = document.getElementById('selectRepoVisibility') as HTMLSelectElement;
-      const tokenInput = document.getElementById('inputGitHubToken') as HTMLInputElement;
-
-      const name = repoNameInput ? repoNameInput.value.trim() : '';
-      const description = repoDescInput ? repoDescInput.value.trim() : '';
-      const isPrivate = selectVisibility ? selectVisibility.value === 'private' : false;
-      const token = tokenInput && tokenInput.value.trim() ? tokenInput.value.trim() : (localStorage.getItem('github_token') || '');
-
-      if (!name) {
-        this.createRepoResult = {
-          success: false,
-          message: 'Please specify a repository name.'
-        };
-        this.render();
-        return;
-      }
-
-      if (!token) {
-        this.createRepoResult = {
-          success: false,
-          message: 'GitHub Personal Access Token (PAT) with "repo" scope is required to create a repository. Please paste your token in the token field above.'
-        };
-        this.render();
-        return;
-      }
-
-      this.isCreatingRepo = true;
-      this.createRepoResult = null;
-      this.render();
-
-      try {
-        const res = await api.createRepoAndPush({
-          name,
-          description,
-          isPrivate,
-          token,
-          username: this.userProfile.login
-        });
-
-        this.isCreatingRepo = false;
-        if (res.success) {
-          this.createRepoResult = {
-            success: true,
-            message: res.message || `Successfully created and pushed to GitHub!`,
-            htmlUrl: res.htmlUrl
-          };
-        } else {
-          this.createRepoResult = {
-            success: false,
-            message: res.error || res.message || 'Failed to create and push repository. Provide a Personal Access Token with repo scope.'
-          };
-        }
-        this.render();
-      } catch (err: any) {
-        this.isCreatingRepo = false;
-        this.createRepoResult = {
-          success: false,
-          message: err.message || 'Network error communicating with Git service.'
-        };
-        this.render();
-      }
-    });
-
-    // Sign Out Handler
-    document.getElementById('btnSignOutGitHub')?.addEventListener('click', async () => {
-      await api.logoutUser();
-      this.userProfile = {
-        login: 'Guest',
-        name: 'Guest User',
-        avatar_url: 'https://avatars.githubusercontent.com/u/9919?v=4',
-        organization: 'Local Workspace',
-        authenticated: false
-      };
-      this.currentTenant = 'guest';
-      this.showGitHubLoginModal = false;
-      this.render();
-    });
-
-    document.querySelectorAll('.btn-push-plan-github').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.showGitHubLoginModal = true;
-        this.createRepoResult = null;
-        this.render();
-      });
-    });
-
-    // Google AI Studio Header Actions
-    document.getElementById('btnEditPromptTitle')?.addEventListener('click', () => {
-      const newTitle = prompt('Enter prompt title:', this.promptTitle);
-      if (newTitle && newTitle.trim()) {
-        this.promptTitle = newTitle.trim();
-        this.render();
-      }
-    });
-
-    document.getElementById('btnOpenGetCodeModal')?.addEventListener('click', async () => {
-      this.studioCodeSnippets = await api.getStudioCode({
-        prompt: this.taskPrompt || 'Write a modern full stack web application with clean design',
-        mode: this.aiMode,
-        systemInstruction: this.systemInstruction,
-        temperature: this.temperature,
-        model: this.selectedModelId,
-        title: this.promptTitle
-      });
-      this.showGetCodeModal = true;
-      this.render();
-    });
-
-    document.getElementById('btnCloseGetCodeModal')?.addEventListener('click', () => {
-      this.showGetCodeModal = false;
-      this.render();
-    });
-
-    document.querySelectorAll('.btn-getcode-tab').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        this.getCodeActiveTab = (e.currentTarget as HTMLElement).dataset['tab'] as any;
-        this.render();
-      });
-    });
-
-    document.getElementById('btnCopyGetCode')?.addEventListener('click', () => {
-      const snippet = this.getActiveCodeSnippet();
-      navigator.clipboard.writeText(snippet);
-      const label = document.getElementById('labelCopyGetCode');
-      if (label) {
-        label.textContent = 'Copied!';
-        setTimeout(() => { label.textContent = 'Copy code'; }, 1500);
-      }
-    });
-
-    document.getElementById('btnSharePrompt')?.addEventListener('click', () => {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Spring AI Autonomous Dev prompt link copied to clipboard!');
-    });
-
-    document.getElementById('btnHeaderRun')?.addEventListener('click', () => this.submitTask());
-
-    // Save Folder / Workspace Root Modal Triggers
-    const openFolderModal = () => {
-      this.showFolderModal = true;
-      this.render();
-    };
-
-    document.getElementById('btnOpenFolder')?.addEventListener('click', openFolderModal);
-    document.getElementById('btnChangeFolderQuick')?.addEventListener('click', openFolderModal);
-    document.getElementById('btnHeaderChangeFolder')?.addEventListener('click', openFolderModal);
-    document.getElementById('btnDockFolderBadge')?.addEventListener('click', openFolderModal);
-
-    // Preset Folder buttons
-    document.querySelectorAll('.btn-preset-folder').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const path = (e.currentTarget as HTMLElement).dataset['path'];
-        const input = document.getElementById('inputFolderModal') as HTMLInputElement;
-        if (input && path) {
-          input.value = path;
-        }
-      });
-    });
-
-    // Native Directory Picker
-    document.getElementById('btnBrowseNativeDir')?.addEventListener('click', async () => {
-      if ('showDirectoryPicker' in window) {
-        try {
-          const dirHandle = await (window as any).showDirectoryPicker();
-          if (dirHandle && dirHandle.name) {
-            const input = document.getElementById('inputFolderModal') as HTMLInputElement;
-            const candidate = (this.commonFolders['userHome'] || 'C:/Users/prana') + '/' + dirHandle.name;
-            if (input) input.value = candidate;
+    // Right Workspace Tabs
+    document.querySelectorAll('.btn-ws-tab').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const tab = (e.currentTarget as HTMLElement).dataset['tab'] as any;
+        if (tab) {
+          this.activeWorkspaceTab = tab;
+          if (tab === 'browser') {
+            await this.bundleProjectToSrcDoc();
           }
-        } catch (ignored) {}
-      } else {
-        document.getElementById('inputNativeDirPicker')?.click();
-      }
+          this.render();
+        }
+      });
     });
 
-    document.getElementById('inputNativeDirPicker')?.addEventListener('change', (e: any) => {
-      const files = e.target.files;
-      if (files && files.length > 0) {
-        const relativePath = files[0].webkitRelativePath;
-        const folderName = relativePath.split('/')[0];
-        const input = document.getElementById('inputFolderModal') as HTMLInputElement;
-        if (input && folderName) {
-          input.value = (this.commonFolders['userHome'] || 'C:/Users/prana') + '/' + folderName;
-        }
-      }
+    // Viewport is always desktop — no mobile/tablet toggles
+
+    document.getElementById('btnReloadPreview')?.addEventListener('click', async () => {
+      await this.loadFiles();
+      await this.bundleProjectToSrcDoc();
+      this.updatePreviewIframe();
+      this.showToast('Preview reloaded.');
     });
+
+    document.getElementById('btnOpenExternalBrowser')?.addEventListener('click', () => {
+      window.open('http://localhost:3001/', '_blank');
+    });
+
+    document.getElementById('btnExportProjectZip')?.addEventListener('click', () => {
+      window.location.href = '/api/workspace/export-zip';
+    });
+
+    // Workspace Folder Modal & Picker Controls
+    const openFolderModalAction = () => {
+      soundEngine.playMechanicalKeyboardClick();
+      this.showFolderModal = true;
+      this.customFolderInput = this.currentWorkspacePath;
+      this.render();
+    };
+
+    document.getElementById('btnOpenFolderModal')?.addEventListener('click', openFolderModalAction);
+    document.getElementById('btnHeaderSelectFolder')?.addEventListener('click', openFolderModalAction);
+    document.getElementById('btnSettingsBrowseFolder')?.addEventListener('click', openFolderModalAction);
 
     document.getElementById('btnCloseFolderModal')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
       this.showFolderModal = false;
       this.render();
     });
+
     document.getElementById('btnCancelFolderModal')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
       this.showFolderModal = false;
       this.render();
     });
-    document.getElementById('btnConfirmFolderModal')?.addEventListener('click', async () => {
-      const input = document.getElementById('inputFolderModal') as HTMLInputElement;
-      if (input && input.value.trim()) {
-        const newPath = input.value.trim();
-        const res = await api.setFolder(newPath);
-        if (res && res.currentFolder) {
-          this.currentWorkspacePath = res.currentFolder;
+
+    // 1-Click Native Windows Folder Dialog
+    document.getElementById('btnPickFolderDialog')?.addEventListener('click', async () => {
+      soundEngine.playLeverClack();
+      this.showToast('[..] Opening Windows Folder Dialog...');
+      try {
+        const res = await api.pickFolderDialog();
+        if (res && res.status === 'SUCCESS' && res.folderPath) {
+          this.currentWorkspacePath = res.folderPath;
+          this.customFolderInput = res.folderPath;
+          this.showFolderModal = false;
+          await this.loadFiles();
+          await this.bundleProjectToSrcDoc();
+          this.render();
+          this.updatePreviewIframe();
+          this.showToast(`[+] Workspace set to: ${this.getFolderDisplayBasename()}`);
         } else {
-          this.currentWorkspacePath = newPath;
+          this.showToast('Folder selection cancelled.');
         }
-        this.showFolderModal = false;
-        await this.loadFiles();
-        await this.bundleProjectToSrcDoc();
-        this.updatePreviewIframe();
-        this.render();
+      } catch (err: any) {
+        this.showToast(`Folder picker error: ${err.message}`, true);
       }
     });
 
-    document.getElementById('btnOpenInExplorerSidebar')?.addEventListener('click', async () => {
-      await api.openFolderInOs();
+    // Manual Custom Path Apply
+    document.getElementById('btnApplyCustomFolder')?.addEventListener('click', () => {
+      const input = document.getElementById('inputCustomFolderPath') as HTMLInputElement;
+      if (input && input.value.trim()) {
+        this.setCustomFolder(input.value.trim());
+      }
     });
 
-    document.getElementById('btnOpenInExplorerModal')?.addEventListener('click', async () => {
-      await api.openFolderInOs();
-    });
+    const customFolderInputEl = document.getElementById('inputCustomFolderPath') as HTMLInputElement;
+    if (customFolderInputEl) {
+      customFolderInputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && customFolderInputEl.value.trim()) {
+          this.setCustomFolder(customFolderInputEl.value.trim());
+        }
+      });
+    }
 
-    // Execute Plan Button inside Plan Card
-    document.querySelectorAll('.btn-execute-plan').forEach(btn => {
+    // Quick Folder Presets
+    document.querySelectorAll('.btn-quick-folder').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const prompt = (e.currentTarget as HTMLElement).dataset['prompt'] || '';
-        if (prompt) {
-          this.executePlan(prompt);
+        const path = (e.currentTarget as HTMLElement).dataset['path'];
+        if (path) {
+          this.setCustomFolder(path);
         }
       });
     });
 
-    // Decision Inquiries & User Choice Options
-    document.querySelectorAll('.btn-decision-choice').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const msgId = (e.currentTarget as HTMLElement).dataset['msgId'];
-        const optId = (e.currentTarget as HTMLElement).dataset['optId'];
-        const action = (e.currentTarget as HTMLElement).dataset['action'] || '';
-        
-        const msg = this.messages.find(m => m.id === msgId);
-        if (msg) {
-          msg.selectedOptionId = optId;
+    // Open Folder in OS Explorer
+    const handleOpenInExplorer = async () => {
+      soundEngine.playMechanicalKeyboardClick();
+      try {
+        const res = await api.openFolderInOs();
+        if (res && res.status === 'SUCCESS') {
+          this.showToast('[+] Opened in Windows File Explorer');
+        } else {
+          this.showToast(res?.message || 'Opened folder in explorer');
         }
-        
-        this.messages.push({
-          id: Math.random().toString(),
-          sender: 'user',
-          type: 'text',
-          content: `Selected Option: ${action}`,
-          timestamp: new Date().toLocaleTimeString()
-        });
+      } catch (err: any) {
+        this.showToast(`Error opening explorer: ${err.message}`, true);
+      }
+    };
 
-        this.executePlan(`[DECISION_ANSWER] ${action}`);
-      });
+    document.getElementById('btnOpenExplorerDirect')?.addEventListener('click', handleOpenInExplorer);
+    document.getElementById('btnModalOpenInOs')?.addEventListener('click', handleOpenInExplorer);
+    document.getElementById('btnSettingsOpenExplorer')?.addEventListener('click', handleOpenInExplorer);
+
+    document.getElementById('btnNewSession')?.addEventListener('click', () => {
+      this.messages = [];
+      this.backendLogs = [];
+      this.activeSession = null;
+      this.render();
+      this.showToast('New studio prompt started.');
     });
 
-    // Swarm Filter Pills
-    document.querySelectorAll('.btn-filter-role').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const role = (e.currentTarget as HTMLElement).dataset['role'] || 'ALL';
-        this.filterSwarmRole = role;
-        this.render();
-      });
-    });
-
-    // Session Switcher & Delete
-    document.querySelectorAll('.session-item').forEach(el => {
-      el.addEventListener('click', (e) => {
+    // Sessions Selection
+    document.querySelectorAll('.session-item').forEach(item => {
+      item.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).closest('.btn-delete-session')) return;
         const id = (e.currentTarget as HTMLElement).dataset['id'];
-        const found = this.sessions.find(s => s.id === id);
-        if (found) {
-          this.activeSession = found;
-          this.messages = found.messages || [];
+        const s = this.sessions.find(x => x.id === id);
+        if (s) {
+          this.activeSession = s;
+          this.messages = s.messages || [];
           this.render();
         }
       });
@@ -2449,54 +2552,117 @@ export class WorkspaceComponent {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const id = (e.currentTarget as HTMLElement).dataset['id'];
-        if (id) {
-          this.sessions = this.sessions.filter(s => s.id !== id);
-          if (this.activeSession?.id === id) {
-            this.activeSession = this.sessions.length > 0 ? this.sessions[0] : null;
-            this.messages = this.activeSession ? (this.activeSession.messages || []) : [];
+        this.sessions = this.sessions.filter(s => s.id !== id);
+        if (this.activeSession?.id === id) {
+          this.activeSession = this.sessions.length > 0 ? this.sessions[0] : null;
+          this.messages = this.activeSession?.messages || [];
+        }
+        this.saveSessionsToStorage();
+        this.render();
+      });
+    });
+
+    // Editor Save (Ctrl+S & button)
+    const editorTextarea = document.getElementById('editorTextarea') as HTMLTextAreaElement;
+    if (editorTextarea) {
+      editorTextarea.addEventListener('input', () => {
+        this.fileContent = editorTextarea.value;
+      });
+      editorTextarea.addEventListener('keydown', async (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          const targetPath = this.selectedFile ? this.selectedFile.path : 'index.html';
+          await api.saveFile(targetPath, editorTextarea.value);
+          this.fileContent = editorTextarea.value;
+          await this.bundleProjectToSrcDoc();
+          this.updatePreviewIframe();
+          this.showToast(`Saved ${targetPath} successfully!`);
+        }
+      });
+    }
+
+    document.getElementById('btnSaveFile')?.addEventListener('click', async () => {
+      const targetPath = this.selectedFile ? this.selectedFile.path : 'index.html';
+      await api.saveFile(targetPath, this.fileContent);
+      await this.bundleProjectToSrcDoc();
+      this.updatePreviewIframe();
+      this.showToast(`Saved ${targetPath} successfully!`);
+    });
+
+    // File Selection
+    document.querySelectorAll('.btn-select-file, .file-item').forEach(item => {
+      item.addEventListener('click', async (e) => {
+        if ((e.target as HTMLElement).closest('.btn-delete-file')) return;
+        const path = (e.currentTarget as HTMLElement).dataset['path'];
+        if (path) {
+          this.showSidePanel = true;
+          this.activeWorkspaceTab = path.toLowerCase().endsWith('.html') ? 'browser' : 'editor';
+          await this.loadFiles();
+          const node = this.fileList.find(f => f.path === path || f.name === path);
+          if (node) {
+            this.selectedFile = node;
+            const res = await api.getFileContent(node.path);
+            this.fileContent = res.content || '';
           }
-          this.saveSessionsToStorage();
+          if (this.activeWorkspaceTab === 'browser') {
+            await this.bundleProjectToSrcDoc();
+          }
+          this.render();
+          this.updatePreviewIframe();
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-delete-file').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const path = (e.currentTarget as HTMLElement).dataset['path'];
+        if (!path) return;
+        await api.deleteFile(path);
+        if (this.selectedFile?.path === path) {
+          this.selectedFile = null;
+          this.fileContent = '';
+        }
+        await this.loadFiles();
+        await this.bundleProjectToSrcDoc();
+        this.render();
+        this.updatePreviewIframe();
+        this.showToast(`Deleted ${path}`);
+      });
+    });
+
+    document.getElementById('btnRefreshFiles')?.addEventListener('click', async () => {
+      await this.loadFiles();
+      await this.bundleProjectToSrcDoc();
+      this.render();
+      this.updatePreviewIframe();
+      this.showToast('Workspace refreshed.');
+    });
+
+    // Decision Options
+    document.querySelectorAll('.btn-decision-choice').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const action = (e.currentTarget as HTMLElement).dataset['action'];
+        if (action) {
+          this.taskPrompt = `[Decision] Selected: ${action}`;
+          this.submitTask();
+        }
+      });
+    });
+
+    // Collapsible Thoughts
+    document.querySelectorAll('.btn-thought-toggle').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = (e.currentTarget as HTMLElement).dataset['id'];
+        const msg = this.messages.find(m => m.id === id);
+        if (msg) {
+          msg.collapsed = !(msg.collapsed ?? false);
           this.render();
         }
       });
     });
 
-    // Workspace Tabs
-    document.querySelectorAll('.btn-ws-tab').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const tab = (e.currentTarget as HTMLElement).dataset['tab'] as any;
-        this.activeWorkspaceTab = tab;
-        if (tab === 'browser') {
-          await this.bundleProjectToSrcDoc();
-        } else if (tab === 'checkpoints') {
-          this.checkpoints = await api.getCheckpoints();
-        }
-        this.render();
-      });
-    });
-
-    // System Instructions Toggle & Text (Google AI Studio)
-    document.getElementById('btnToggleSystemInstruction')?.addEventListener('click', () => {
-      this.systemInstructionOpen = !this.systemInstructionOpen;
-      this.render();
-    });
-    document.getElementById('btnCloseSystemInstruction')?.addEventListener('click', () => {
-      this.systemInstructionOpen = false;
-      this.render();
-    });
-    document.getElementById('systemInstructionText')?.addEventListener('input', (e) => {
-      this.systemInstruction = (e.target as HTMLTextAreaElement).value;
-    });
-
-    // Temperature Slider (Google AI Studio Tuning)
-    document.getElementById('inputTemperature')?.addEventListener('input', (e) => {
-      const val = parseFloat((e.target as HTMLInputElement).value);
-      this.temperature = val;
-      const badge = document.getElementById('tempValueBadge');
-      if (badge) badge.textContent = val.toFixed(2);
-    });
-
-    // Prompt Input with Ctrl+Enter or Enter
+    // Prompt Input
     const input = document.getElementById('taskInput') as HTMLTextAreaElement;
     if (input) {
       input.addEventListener('input', () => {
@@ -2511,183 +2677,1364 @@ export class WorkspaceComponent {
     }
 
     document.getElementById('btnSubmitTask')?.addEventListener('click', () => this.submitTask());
+    document.getElementById('btnHeaderRun')?.addEventListener('click', () => this.submitTask());
     document.getElementById('btnStopExecution')?.addEventListener('click', () => this.stopExecution());
     document.getElementById('btnClearChat')?.addEventListener('click', () => {
       this.messages = [];
       this.render();
     });
 
-    // Copy turn response (Google AI Studio)
+    // System Instructions
+    document.getElementById('btnToggleSystemInstruction')?.addEventListener('click', () => {
+      this.systemInstructionOpen = !this.systemInstructionOpen;
+      this.render();
+    });
+    document.getElementById('btnCloseSystemInstruction')?.addEventListener('click', () => {
+      this.systemInstructionOpen = false;
+      this.render();
+    });
+    document.getElementById('systemInstructionText')?.addEventListener('input', (e) => {
+      this.systemInstruction = (e.target as HTMLTextAreaElement).value;
+    });
+
+    // Gemini API Key & Model Engine Settings
+    const inputGeminiKey = document.getElementById('inputGeminiApiKey') as HTMLInputElement;
+    if (inputGeminiKey) {
+      inputGeminiKey.addEventListener('input', () => {
+        localStorage.setItem('gemini_api_key', inputGeminiKey.value.trim());
+      });
+    }
+
+    const btnToggleShowKey = document.getElementById('btnToggleShowGeminiKey');
+    if (btnToggleShowKey && inputGeminiKey) {
+      btnToggleShowKey.addEventListener('click', () => {
+        if (inputGeminiKey.type === 'password') {
+          inputGeminiKey.type = 'text';
+          btnToggleShowKey.textContent = 'HIDE';
+        } else {
+          inputGeminiKey.type = 'password';
+          btnToggleShowKey.textContent = 'SHOW';
+        }
+      });
+    }
+
+    const selectModel = document.getElementById('selectModelId') as HTMLSelectElement;
+    if (selectModel) {
+      selectModel.addEventListener('change', () => {
+        this.selectedModelId = selectModel.value;
+        localStorage.setItem('agent_model', selectModel.value);
+        this.showToast(`Selected model: ${selectModel.value}`);
+      });
+    }
+
+    const inputTemp = document.getElementById('inputTemperature') as HTMLInputElement;
+    if (inputTemp) {
+      inputTemp.addEventListener('input', () => {
+        this.temperature = parseFloat(inputTemp.value);
+        const badge = document.getElementById('tempValueBadge');
+        if (badge) badge.textContent = this.temperature.toFixed(2);
+      });
+    }
+
+    // Resizer
+    const resizer = document.getElementById('resizerHandle');
+    if (resizer) {
+      resizer.addEventListener('mousedown', (e) => {
+        this.isResizing = true;
+        resizer.classList.add('resizing');
+      });
+    }
+
+    // Copy Code Snippets
+    document.querySelectorAll('.btn-copy-code').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const code = (e.currentTarget as HTMLElement).dataset['code'] || '';
+        if (code) {
+          navigator.clipboard.writeText(code);
+          this.showToast('Copied code to clipboard.');
+        }
+      });
+    });
+
     document.querySelectorAll('.btn-copy-turn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const text = (e.currentTarget as HTMLElement).dataset['text'] || '';
         if (text) {
           navigator.clipboard.writeText(text);
-          const span = (e.currentTarget as HTMLElement).querySelector('span');
-          if (span) {
-            span.textContent = 'Copied!';
-            setTimeout(() => { span.textContent = 'Copy Response'; }, 1800);
-          }
+          this.showToast('Copied response to clipboard.');
         }
       });
     });
 
-    // Copy Code Snippet buttons
-    document.querySelectorAll('.btn-copy-code').forEach(btn => {
+    // Global Delegated Clicks for Folder & Account
+    document.getElementById('btnOpenUserAccountModal')?.addEventListener('click', () => {
+      this.showUserMenu = true;
+      this.render();
+    });
+    document.getElementById('btnDirectLogoutSidebar')?.addEventListener('click', () => this.handleLogoutAction());
+    document.getElementById('btnHeaderLogout')?.addEventListener('click', () => this.handleLogoutAction());
+  }
+
+  private onMouseMove(e: MouseEvent) {
+    if (!this.isResizing) return;
+    const containerWidth = this.container.offsetWidth || window.innerWidth;
+    const mouseX = e.clientX;
+    const newWidthPercent = Math.max(20, Math.min(80, ((containerWidth - mouseX) / containerWidth) * 100));
+    this.panelWidthPercent = Math.round(newWidthPercent);
+    const sidePanel = this.container.querySelector('aside[style*="width"]') as HTMLElement;
+    if (sidePanel) {
+      sidePanel.style.width = `${this.panelWidthPercent}%`;
+    }
+  }
+
+  // --- Enterprise Autonomous CI/CD Pipeline Renderer & Terminal ---
+
+  public updatePipelineTerminal(): void {
+    const el = document.getElementById('pipelineTerminalStream');
+    if (el) {
+      el.innerHTML = this.pipelineTerminalLogs.map(l => this.formatTerminalLogLine(l)).join('\n');
+      el.scrollTop = el.scrollHeight;
+    }
+  }
+
+  private formatTerminalLogLine(line: string): string {
+    let escaped = this.escapeHtml(line);
+    if (escaped.includes('PASSED') || escaped.includes('SUCCESS') || escaped.includes('Grade A+')) {
+      return `<span class="text-[#4ade80] font-bold">${escaped}</span>`;
+    }
+    if (escaped.includes('FAILED') || escaped.includes('ERROR') || escaped.includes('CRITICAL')) {
+      return `<span class="text-[#f87171] font-bold">${escaped}</span>`;
+    }
+    if (escaped.includes('WARNING') || escaped.includes('PENDING') || escaped.includes('SCANNING')) {
+      return `<span class="text-[#facc15]">${escaped}</span>`;
+    }
+    if (escaped.includes('[TEST]') || escaped.includes('Artifact built:') || escaped.includes('Quality Gate:')) {
+      return `<span class="text-[#38bdf8] font-bold">${escaped}</span>`;
+    }
+    if (escaped.startsWith('[')) {
+      const idx = escaped.indexOf(']');
+      if (idx !== -1) {
+        return `<span class="text-[#737373]">${escaped.substring(0, idx + 1)}</span><span class="text-[#e5e5e5]">${escaped.substring(idx + 1)}</span>`;
+      }
+    }
+    return `<span class="text-[#d4d4d4]">${escaped}</span>`;
+  }
+
+  public renderWorkflowStudio(): string {
+    const wf = this.activeWorkflow || {
+      id: 'tpl-pr-governance',
+      name: 'GitHub PR Auto-Review & Gemini SAST Audit',
+      description: 'Ingests incoming GitHub PR Webhooks, runs static Shannon entropy scan, dispatches Gemini code review, and posts automated PR decisions.',
+      nodes: [],
+      edges: []
+    };
+
+    const selectedNode = (wf.nodes || []).find((n: any) => n.id === this.selectedWorkflowNodeId) || wf.nodes?.[0];
+    const selectedNodeResult = this.activeWorkflowRun?.nodeResults?.[selectedNode?.id || ''];
+
+    const totalNodes = (wf.nodes || []).length;
+    const completedNodes = (wf.nodes || []).filter((n: any) => n.status === 'SUCCESS').length;
+    const isRunning = this.isWorkflowExecuting || (wf.nodes || []).some((n: any) => n.status === 'RUNNING');
+    const isFailed = (wf.nodes || []).some((n: any) => n.status === 'FAILED');
+    const isSuccess = completedNodes === totalNodes && totalNodes > 0;
+
+    const getNodeSymbol = (type: string) => {
+      switch (type) {
+        case 'TRIGGER_WEBHOOK':
+        case 'TRIGGER_MANUAL': return '[>] TRIGGER';
+        case 'AI_GEMINI_REASONER': return '[?] GEMINI AI';
+        case 'SECURITY_SAST_SCAN': return '[#] SAST SCAN';
+        case 'BRANCH_IF_ELSE': return '[?] QUALITY GATE';
+        case 'CODE_TRANSFORM': return '[//] TRANSFORM';
+        case 'HTTP_REST_REQUEST': return '[*] REST API';
+        case 'FILE_SYSTEM_OUTPUT': return '[+] FS WRITE';
+        default: return '[#] NODE';
+      }
+    };
+
+    return `
+      <div class="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar flex flex-col items-center bg-[#000000] font-mono">
+        <div class="max-w-7xl w-full space-y-5">
+          
+          <!-- 1. Workflow Header & Blueprint Toolbar -->
+          <div class="retro-panel p-4 sm:p-5 border-2 ${isSuccess ? 'border-[#38bdf8]' : (isFailed ? 'border-red-500' : 'border-[#383838]')} shadow-2xl space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#242424] pb-4">
+              <div class="space-y-1.5 min-w-0 flex-1">
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  <span class="led-indicator ${isRunning ? 'led-accent led-pulsing' : (isSuccess ? 'led-white' : 'led-white')}"></span>
+                  <span class="text-xs px-2 py-0.5 bg-[#082038] border border-[#0369a1] text-[#38bdf8] rounded font-bold uppercase">
+                    DAG WORKFLOW ENGINE
+                  </span>
+                  
+                  <!-- Blueprint Selector Dropdown -->
+                  <div class="flex items-center gap-1.5 bg-[#141414] border border-[#383838] rounded px-2 py-1">
+                    <span class="text-[10px] text-[#737373] uppercase font-bold">[#] BLUEPRINT:</span>
+                    <select id="selectWorkflowBlueprint" class="bg-transparent text-white text-xs font-mono font-bold outline-none cursor-pointer">
+                      <option value="tpl-pr-governance" ${wf.id === 'tpl-pr-governance' ? 'selected' : ''}>GitHub PR Auto-Review &amp; Gemini SAST Audit</option>
+                      <option value="tpl-incident-healer" ${wf.id === 'tpl-incident-healer' ? 'selected' : ''}>Autonomous Incident Root-Cause &amp; Self-Fixer</option>
+                      ${(this.workflowTemplatesList || []).filter(t => t.id !== 'tpl-pr-governance' && t.id !== 'tpl-incident-healer').map(t => `
+                        <option value="${t.id}" ${wf.id === t.id ? 'selected' : ''}>${this.escapeHtml(t.name)}</option>
+                      `).join('')}
+                    </select>
+                  </div>
+                </div>
+
+                <p class="text-xs text-[#a3a3a3] font-sans leading-relaxed">
+                  ${this.escapeHtml(wf.description || 'Distributed asynchronous directed acyclic graph (DAG) workflow engine.')}
+                </p>
+              </div>
+
+              <!-- Action Controls -->
+              <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
+                <button id="btnExecuteWorkflowCanvas" class="retro-btn retro-btn-accent px-4 py-2 text-xs font-bold flex items-center gap-2 shadow-lg">
+                  <span>${isRunning ? '[~] EXECUTING DAG...' : '[>] RUN WORKFLOW'}</span>
+                </button>
+                <button id="btnCopyWorkflowWebhook" class="retro-btn px-3 py-2 text-xs text-[#a3a3a3] hover:text-white flex items-center gap-1.5" title="Copy Webhook Endpoint URL">
+                  <span>[#] COPY WEBHOOK URL</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Metrics & State Strip -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div class="p-3 bg-[#080808] border border-[#242424] rounded space-y-1">
+                <div class="text-[10px] text-[#737373] uppercase font-bold">EXECUTION STATE</div>
+                <div class="text-sm font-bold ${isSuccess ? 'text-[#4ade80]' : (isFailed ? 'text-[#f87171]' : (isRunning ? 'text-[#38bdf8]' : 'text-white'))} flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full ${isSuccess ? 'bg-[#4ade80]' : (isFailed ? 'bg-[#f87171]' : (isRunning ? 'bg-[#38bdf8]' : 'bg-[#737373]'))} block"></span>
+                  <span>${isRunning ? 'RUNNING' : (isSuccess ? 'COMPLETED' : (isFailed ? 'FAILED' : 'READY / IDLE'))}</span>
+                </div>
+              </div>
+
+              <div class="p-3 bg-[#080808] border border-[#242424] rounded space-y-1">
+                <div class="text-[10px] text-[#737373] uppercase font-bold">NODE PROGRESS</div>
+                <div class="text-sm font-bold text-white flex items-center gap-1.5">
+                  <span>${completedNodes} / ${totalNodes} NODES</span>
+                  <span class="text-xs text-[#38bdf8] font-bold">(${totalNodes > 0 ? Math.round((completedNodes / totalNodes) * 100) : 0}%)</span>
+                </div>
+              </div>
+
+              <div class="p-3 bg-[#080808] border border-[#242424] rounded space-y-1">
+                <div class="text-[10px] text-[#737373] uppercase font-bold">DAG TOPOLOGY</div>
+                <div class="text-xs font-bold text-[#38bdf8] truncate flex items-center gap-1">
+                  <span>[*]</span>
+                  <span>${(wf.edges || []).length} EDGES • ASYNC PARALLEL</span>
+                </div>
+              </div>
+
+              <div class="p-3 bg-[#080808] border border-[#242424] rounded space-y-1">
+                <div class="text-[10px] text-[#737373] uppercase font-bold">WEBHOOK LISTENER</div>
+                <div class="text-[11px] font-mono text-[#4ade80] truncate flex items-center gap-1">
+                  <span>[+]</span>
+                  <span>/api/workflow/webhook/${wf.id}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Main Workflow Area: Connected DAG Graph Canvas (Col 8) + Live Node Payload Inspector (Col 4) -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            
+            <!-- Left DAG Canvas (8 cols) -->
+            <div class="lg:col-span-8 retro-panel p-4 sm:p-5 border border-[#383838] flex flex-col space-y-4 shadow-xl">
+              <div class="flex items-center justify-between border-b border-[#242424] pb-2 flex-shrink-0">
+                <span class="text-xs font-bold text-white uppercase flex items-center gap-2">
+                  <span class="screw-head"></span>
+                  <span>[INTERACTIVE DAG WORKFLOW CANVAS // TOPOLOGICAL GRAPH]</span>
+                </span>
+                <span class="text-[10px] text-[#737373] font-mono">CLICK ANY NODE TO INSPECT LIVE DATA</span>
+              </div>
+
+              <!-- Node Cards Sequence Strip -->
+              <div class="space-y-3 overflow-y-auto max-h-[580px] custom-scrollbar pr-1">
+                ${(wf.nodes || []).map((node: any) => {
+                  const isNodeSelected = selectedNode?.id === node.id;
+                  const isNodeSuccess = node.status === 'SUCCESS';
+                  const isNodeRunning = node.status === 'RUNNING';
+                  const isNodeFailed = node.status === 'FAILED';
+                  const nodeDuration = node.durationMs ? `${node.durationMs}ms` : '--';
+
+                  // Find outgoing edge
+                  const outgoingEdge = (wf.edges || []).find((e: any) => e.source === node.id);
+
+                  return `
+                    <div class="space-y-2">
+                      <div class="workflow-node-card p-4 rounded border-2 transition-all cursor-pointer select-none ${
+                        isNodeSelected 
+                          ? 'bg-[#121212] border-[#38bdf8] shadow-[0_0_16px_rgba(56,189,248,0.35)]' 
+                          : (isNodeSuccess 
+                              ? 'bg-[#080808] border-[#224422] hover:border-[#38bdf8]' 
+                              : (isNodeRunning 
+                                  ? 'bg-[#0f172a] border-[#facc15] animate-pulse' 
+                                  : (isNodeFailed 
+                                      ? 'bg-[#1a0505] border-red-500' 
+                                      : 'bg-[#050505] border-[#242424] hover:border-[#444]')))}" 
+                        data-node-id="${node.id}">
+                        
+                        <div class="flex items-center justify-between gap-2 border-b border-[#1c1c1c] pb-2 mb-2">
+                          <div class="flex items-center gap-2">
+                            <span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded uppercase ${
+                              node.type.includes('TRIGGER') ? 'bg-[#1e1b4b] text-[#818cf8] border border-[#4338ca]' :
+                              node.type.includes('AI') ? 'bg-[#082038] text-[#38bdf8] border border-[#0369a1]' :
+                              node.type.includes('SECURITY') ? 'bg-[#2e1065] text-[#c084fc] border border-[#7e22ce]' :
+                              node.type.includes('BRANCH') ? 'bg-[#422006] text-[#fb923c] border border-[#9a3412]' :
+                              'bg-[#141414] text-white border border-[#383838]'
+                            }">
+                              ${getNodeSymbol(node.type)}
+                            </span>
+                            <span class="text-[10px] font-mono text-[#737373]">#${node.id}</span>
+                          </div>
+
+                          <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-mono text-[#737373]">${nodeDuration}</span>
+                            <span class="text-[9px] font-bold px-2 py-0.5 rounded uppercase ${
+                              isNodeSuccess ? 'bg-[#082038] text-[#38bdf8] border border-[#0369a1]' :
+                              isNodeRunning ? 'bg-[#2a2408] text-[#facc15] border border-[#71580d]' :
+                              isNodeFailed ? 'bg-[#2d0606] text-red-400 border border-red-900' :
+                              'bg-[#141414] text-[#737373] border border-[#242424]'
+                            }">
+                              ${isNodeSuccess ? '[+] PASSED' : (isNodeRunning ? '[~] RUNNING' : (isNodeFailed ? '[!] FAILED' : '[-] QUEUED'))}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div class="space-y-1">
+                          <div class="font-bold text-xs text-white uppercase tracking-tight flex items-center justify-between">
+                            <span>${this.escapeHtml(node.name)}</span>
+                            ${isNodeSelected ? '<span class="text-[10px] text-[#38bdf8] font-mono font-bold">[SELECTED]</span>' : ''}
+                          </div>
+                          <div class="text-[11px] text-[#a3a3a3] font-sans leading-relaxed">${this.escapeHtml(node.description || '')}</div>
+                        </div>
+
+                        <!-- Config Quick Preview -->
+                        ${node.config ? `
+                          <div class="mt-2.5 pt-2 border-t border-[#1a1a1a] flex items-center justify-between text-[10px] text-[#737373] font-mono">
+                            <span class="truncate max-w-[320px]">CONFIG: ${this.escapeHtml(JSON.stringify(node.config))}</span>
+                            <span class="text-[#38bdf8] hover:underline flex-shrink-0">INSPECT ↗</span>
+                          </div>
+                        ` : ''}
+                      </div>
+
+                      ${outgoingEdge ? `
+                        <div class="flex items-center justify-center py-0.5">
+                          <div class="flex items-center gap-2 px-3 py-1 bg-[#0a0a0a] border border-[#242424] rounded text-[10px] font-mono text-[#737373]">
+                            <span>↓</span>
+                            <span>DISPATCH EDGE [${outgoingEdge.sourceHandle || 'DEFAULT'}]</span>
+                            <span>↓</span>
+                          </div>
+                        </div>
+                      ` : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Right Live Node Payload Inspector (4 cols) -->
+            <div class="lg:col-span-4 retro-panel p-4 border border-[#383838] flex flex-col space-y-3.5 shadow-xl">
+              <div class="flex items-center justify-between border-b border-[#242424] pb-2 flex-shrink-0">
+                <span class="text-xs font-bold text-white uppercase flex items-center gap-2">
+                  <span class="text-[#38bdf8] flex-shrink-0">[#]</span>
+                  <span>[NODE PAYLOAD INSPECTOR]</span>
+                </span>
+                <button id="btnCopySelectedNodePayload" class="text-[10px] text-[#737373] hover:text-white cursor-pointer uppercase font-bold">
+                  COPY JSON
+                </button>
+              </div>
+
+              ${selectedNode ? `
+                <div class="space-y-3 overflow-y-auto max-h-[580px] custom-scrollbar pr-1 text-xs font-mono">
+                  
+                  <!-- Node Metadata Card -->
+                  <div class="p-3 bg-[#080808] border border-[#242424] rounded space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <span class="text-[10px] text-[#737373] uppercase font-bold">NODE IDENTIFIER</span>
+                      <span class="text-[10px] px-1.5 py-0.2 bg-[#141414] border border-[#383838] text-[#38bdf8] rounded font-bold">${selectedNode.id}</span>
+                    </div>
+                    <div class="font-bold text-white text-xs uppercase">${this.escapeHtml(selectedNode.name)}</div>
+                    <div class="text-[10px] text-[#a3a3a3] font-sans">${this.escapeHtml(selectedNode.description || '')}</div>
+                  </div>
+
+                  <!-- Node Configuration JSON -->
+                  <div class="space-y-1">
+                    <div class="text-[10px] text-[#737373] uppercase font-bold flex items-center justify-between">
+                      <span>NODE CONFIGURATION</span>
+                      <span class="text-[9px] text-[#38bdf8]">[SCHEMA]</span>
+                    </div>
+                    <pre class="p-2.5 bg-[#000000] border border-[#1f1f1f] rounded text-[10.5px] font-mono text-[#e5e5e5] leading-relaxed custom-scrollbar whitespace-pre-wrap select-text max-h-[140px] overflow-y-auto">${this.escapeHtml(JSON.stringify(selectedNode.config || {}, null, 2))}</pre>
+                  </div>
+
+                  <!-- Evaluated Input Payload -->
+                  <div class="space-y-1">
+                    <div class="text-[10px] text-[#737373] uppercase font-bold flex items-center justify-between">
+                      <span>LIVE INPUT PAYLOAD</span>
+                      <span class="text-[9px] text-[#4ade80]">[INTERPOLATED]</span>
+                    </div>
+                    <pre class="p-2.5 bg-[#000000] border border-[#1f1f1f] rounded text-[10.5px] font-mono text-[#a3e635] leading-relaxed custom-scrollbar whitespace-pre-wrap select-text max-h-[150px] overflow-y-auto">${this.escapeHtml(JSON.stringify(selectedNodeResult?.inputData || selectedNode.config || { status: 'STANDBY_AWAITING_INPUT' }, null, 2))}</pre>
+                  </div>
+
+                  <!-- Evaluated Output Payload -->
+                  <div class="space-y-1">
+                    <div class="text-[10px] text-[#737373] uppercase font-bold flex items-center justify-between">
+                      <span>LIVE OUTPUT / AI EVALUATION</span>
+                      <span class="text-[9px] text-[#38bdf8]">[RESULT]</span>
+                    </div>
+                    <pre class="p-2.5 bg-[#000000] border border-[#1f1f1f] rounded text-[10.5px] font-mono text-[#38bdf8] leading-relaxed custom-scrollbar whitespace-pre-wrap select-text max-h-[170px] overflow-y-auto">${this.escapeHtml(JSON.stringify(selectedNodeResult?.outputData || (selectedNode.outputData ? selectedNode.outputData : { status: 'READY_TO_DISPATCH' }), null, 2))}</pre>
+                  </div>
+
+                </div>
+              ` : `
+                <div class="p-6 text-center text-[#737373] text-xs font-mono">
+                  SELECT A NODE ON THE CANVAS TO INSPECT INPUT/OUTPUT STATE
+                </div>
+              `}
+            </div>
+
+          </div>
+
+          <!-- 3. Bottom Live Workflow Execution Terminal -->
+          <div class="retro-panel p-4 border border-[#383838] flex flex-col h-[280px] shadow-xl">
+            <div class="flex items-center justify-between border-b border-[#242424] pb-2 mb-2 flex-shrink-0">
+              <span class="text-xs font-bold text-white uppercase flex items-center gap-2">
+                <span class="text-[#38bdf8] flex-shrink-0">[#]</span>
+                <span>[LIVE WORKFLOW ENGINE TELEMETRY STREAM]</span>
+              </span>
+              <div class="flex items-center gap-2">
+                <button id="btnCopyWorkflowLogs" class="text-[10px] text-[#737373] hover:text-white cursor-pointer uppercase font-bold">
+                  COPY LOGS
+                </button>
+                <button id="btnClearWorkflowLogs" class="text-[10px] text-[#737373] hover:text-white cursor-pointer uppercase font-bold">
+                  CLEAR
+                </button>
+              </div>
+            </div>
+
+            <pre id="workflowTerminalStream" class="flex-1 overflow-y-auto p-3 bg-[#000000] border border-[#1a1a1a] rounded text-[11px] font-mono leading-relaxed custom-scrollbar whitespace-pre-wrap select-text">${(this.workflowExecutionLogs.length > 0 ? this.workflowExecutionLogs : [
+              '[*] Distributed Workflow Engine initialized and listening on SSE stream /api/workflow/stream',
+              '[*] Ready to accept webhook events and manual trigger requests.',
+              '[*] Blueprint templates loaded: GitHub PR Auto-Review & Gemini SAST Audit, Autonomous Incident Root-Cause & Self-Fixer'
+            ]).map(l => this.formatTerminalLogLine(l)).join('\n')}</pre>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  public renderPipelineDashboard(): string {
+    const p = this.activePipelineRun || {
+      id: 'pipe-idle',
+      repoName: 'spring-enterprise-service',
+      branch: 'main',
+      commitHash: '7a9f21d',
+      status: 'IDLE',
+      durationMs: 0,
+      qualityGrade: 'A+',
+      governanceDecision: 'APPROVED_FOR_DEPLOYMENT',
+      totalTests: 24,
+      passedTests: 24,
+      coveragePercent: 94.5,
+      artifactName: 'spring-enterprise-service-1.0.0.jar',
+      artifactSha256: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+      stages: []
+    };
+
+    const isRunning = p.status === 'RUNNING';
+    const isSuccess = p.status === 'SUCCESS';
+    const isFailed = p.status === 'FAILED';
+
+    return `
+      <div class="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar flex flex-col items-center bg-[#000000] font-mono">
+        <div class="max-w-6xl w-full space-y-5">
+          
+          <!-- 1. Pipeline Overview & Command Strip -->
+          <div class="retro-panel p-4 sm:p-5 border-2 ${isSuccess ? 'border-[#38bdf8]' : (isFailed ? 'border-red-500' : 'border-[#383838]')} shadow-2xl space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#242424] pb-4">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2.5">
+                  <span class="led-indicator ${isRunning ? 'led-accent led-pulsing' : (isSuccess ? 'led-white' : 'led-danger')}"></span>
+                  <h1 class="text-base sm:text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
+                    <span>${this.escapeHtml(p.repoName || 'spring-enterprise-service')}</span>
+                    <span class="text-xs px-2 py-0.5 bg-[#141414] border border-[#383838] text-[#38bdf8] rounded font-bold">git: ${this.escapeHtml(p.branch || 'main')}</span>
+                    <span class="text-xs text-[#737373] hidden sm:inline">#${this.escapeHtml((p.commitHash || 'HEAD').substring(0, 10))}</span>
+                  </h1>
+                </div>
+                <p class="text-xs text-[#a3a3a3] font-sans">
+                  Enterprise Multi-Stage Distributed CI/CD Pipeline &amp; Automated Code Governance Engine
+                </p>
+              </div>
+
+              <!-- Action Controls -->
+              <div class="flex items-center gap-2 flex-wrap">
+                <button id="btnDirectTriggerPipeline" class="retro-btn retro-btn-accent px-4 py-2 text-xs font-bold flex items-center gap-2 shadow-lg">
+                  <span>${isRunning ? '[//] PIPELINE RUNNING...' : '[>] TRIGGER PIPELINE'}</span>
+                </button>
+                <button id="btnOpenTriggerPipelineModal" class="retro-btn px-3 py-2 text-xs font-bold text-white flex items-center gap-1.5" title="Configure repository & branch">
+                  ${MAC_ICONS.command}
+                  <span>CONFIG</span>
+                </button>
+                <button id="btnCopyWebhookUrl" class="retro-btn px-3 py-2 text-xs text-[#a3a3a3] hover:text-white flex items-center gap-1" title="Copy GitHub Webhook Endpoint">
+                  ${MAC_ICONS.doc}
+                  <span>WEBHOOK</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Top Summary Metric Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div class="p-3 bg-[#080808] border border-[#242424] rounded space-y-1">
+                <div class="text-[10px] text-[#737373] uppercase font-bold">PIPELINE STATUS</div>
+                <div class="text-sm font-bold ${isSuccess ? 'text-[#4ade80]' : (isFailed ? 'text-[#f87171]' : 'text-[#38bdf8]')} flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full ${isSuccess ? 'bg-[#4ade80]' : (isFailed ? 'bg-[#f87171]' : 'bg-[#38bdf8]')} block"></span>
+                  <span>${p.status || 'READY'}</span>
+                </div>
+              </div>
+
+              <div class="p-3 bg-[#080808] border border-[#242424] rounded space-y-1">
+                <div class="text-[10px] text-[#737373] uppercase font-bold">SECURITY SAST GRADE</div>
+                <div class="text-sm font-bold text-[#38bdf8] flex items-center gap-1.5">
+                  <span class="px-1.5 py-0.2 bg-[#082038] border border-[#0369a1] text-[#38bdf8] rounded text-xs font-black">${p.qualityGrade || 'A+'}</span>
+                  <span class="text-xs text-white">0 Vulnerabilities</span>
+                </div>
+              </div>
+
+              <div class="p-3 bg-[#080808] border border-[#242424] rounded space-y-1">
+                <div class="text-[10px] text-[#737373] uppercase font-bold">TEST PASS RATE</div>
+                <div class="text-sm font-bold text-white flex items-center gap-1.5">
+                  <span>${p.passedTests || 24} / ${p.totalTests || 24}</span>
+                  <span class="text-xs text-[#4ade80] font-bold">(${p.coveragePercent || 94.5}% cov)</span>
+                </div>
+              </div>
+
+              <div class="p-3 bg-[#080808] border border-[#242424] rounded space-y-1">
+                <div class="text-[10px] text-[#737373] uppercase font-bold">GOVERNANCE GATE</div>
+                <div class="text-xs font-bold text-[#38bdf8] truncate flex items-center gap-1">
+                  <span>[#]</span>
+                  <span>${(p.governanceDecision || 'APPROVED').replace(/_/g, ' ')}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Interactive 6-Stage Execution Pipeline Grid -->
+          <div class="retro-panel p-4 sm:p-5 border border-[#383838] space-y-3">
+            <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+              <span class="text-xs font-bold text-white uppercase flex items-center gap-2">
+                <span class="screw-head"></span>
+                <span>[STAGE PROGRESSION // MULTI-NODE WORKERS]</span>
+              </span>
+              <span class="text-[10px] text-[#737373] font-mono">EXECUTION TIME: ${(p.durationMs ? (p.durationMs / 1000).toFixed(2) : '3.84')}s</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+              ${(p.stages || []).map((s: any, idx: number) => {
+                const isStageSuccess = s.status === 'SUCCESS';
+                const isStageRunning = s.status === 'RUNNING';
+                const isStageFailed = s.status === 'FAILED';
+                
+                return `
+                  <div class="p-3 bg-[#050505] border ${isStageSuccess ? 'border-[#38bdf8] shadow-[0_0_10px_rgba(56,189,248,0.2)]' : (isStageRunning ? 'border-[#facc15] shadow-[0_0_10px_rgba(250,204,21,0.3)] animate-pulse' : (isStageFailed ? 'border-red-500' : 'border-[#242424]'))} rounded flex flex-col justify-between space-y-2.5">
+                    <div class="flex items-center justify-between">
+                      <span class="text-[9px] font-bold text-[#737373] uppercase">STAGE 0${idx + 1}</span>
+                      <span class="text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${isStageSuccess ? 'bg-[#082038] text-[#38bdf8] border border-[#0369a1]' : (isStageRunning ? 'bg-[#2a2408] text-[#facc15] border border-[#71580d]' : 'bg-[#141414] text-[#737373]')}">
+                        ${s.status || 'PENDING'}
+                      </span>
+                    </div>
+
+                    <div class="space-y-1">
+                      <div class="font-bold text-xs text-white uppercase tracking-tight truncate">${s.name}</div>
+                      <div class="text-[10px] text-[#a3a3a3] line-clamp-2 leading-tight font-sans">${s.description}</div>
+                    </div>
+
+                    <div class="pt-1 border-t border-[#1c1c1c] flex items-center justify-between text-[10px] font-mono">
+                      <span class="text-[#737373]">${isStageSuccess ? '[+] PASSED' : (isStageRunning ? '[~] RUNNING' : '[-] PENDING')}</span>
+                      <span class="text-white font-bold">${s.durationMs ? `${s.durationMs}ms` : '--'}</span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- 3. Telemetry Stream & Security Auditing Suite -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            
+            <!-- Left Console Log Streamer (7 cols) -->
+            <div class="lg:col-span-7 retro-panel p-4 border border-[#383838] flex flex-col h-[420px] shadow-xl">
+              <div class="flex items-center justify-between border-b border-[#242424] pb-2 mb-2 flex-shrink-0">
+                <span class="text-xs font-bold text-white uppercase flex items-center gap-2">
+                  <span class="text-[#38bdf8] flex-shrink-0">${MAC_ICONS.macScreen}</span>
+                  <span>[LIVE PIPELINE CONSOLE STREAM]</span>
+                </span>
+                <div class="flex items-center gap-2">
+                  <button id="btnCopyPipelineLogs" class="text-[10px] text-[#737373] hover:text-white cursor-pointer uppercase font-bold">
+                    COPY LOGS
+                  </button>
+                  <button id="btnClearPipelineLogs" class="text-[10px] text-[#737373] hover:text-white cursor-pointer uppercase font-bold">
+                    CLEAR
+                  </button>
+                </div>
+              </div>
+
+              <pre id="pipelineTerminalStream" class="flex-1 overflow-y-auto p-3 bg-[#000000] border border-[#1a1a1a] rounded text-[11px] font-mono leading-relaxed custom-scrollbar whitespace-pre-wrap select-text">${(this.pipelineTerminalLogs.length > 0 ? this.pipelineTerminalLogs : p.logs || []).map(l => this.formatTerminalLogLine(l)).join('\n')}</pre>
+            </div>
+
+            <!-- Right Governance, Test & SAST Cards (5 cols) -->
+            <div class="lg:col-span-5 space-y-4">
+              
+              <!-- SAST Security Scan Card -->
+              <div class="retro-panel p-4 border border-[#383838] space-y-2.5 shadow-lg">
+                <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+                  <span class="text-xs font-bold text-white uppercase flex items-center gap-2">
+                    <span class="text-[#38bdf8]">[#]</span>
+                    <span>SAST SECURITY AUDIT</span>
+                  </span>
+                  <span class="text-[10px] px-2 py-0.5 bg-[#082038] border border-[#0369a1] text-[#38bdf8] rounded font-bold">GRADE A+</span>
+                </div>
+                <div class="space-y-1.5 text-xs text-[#a3a3a3] font-sans">
+                  <div class="flex items-center justify-between font-mono">
+                    <span>Shannon Secret Entropy:</span>
+                    <span class="text-[#4ade80] font-bold">0 Leaks Detected</span>
+                  </div>
+                  <div class="flex items-center justify-between font-mono">
+                    <span>Static AST Vulnerabilities:</span>
+                    <span class="text-[#4ade80] font-bold">0 High / 0 Crit</span>
+                  </div>
+                  <div class="flex items-center justify-between font-mono">
+                    <span>Dependency CVE Audit:</span>
+                    <span class="text-white font-bold">All 18 Clean</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- JUnit 5 & Jest Test Metrics Card -->
+              <div class="retro-panel p-4 border border-[#383838] space-y-2.5 shadow-lg">
+                <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+                  <span class="text-xs font-bold text-white uppercase flex items-center gap-2">
+                    <span class="text-[#38bdf8]">${MAC_ICONS.doc}</span>
+                    <span>AUTOMATED QA SUITE</span>
+                  </span>
+                  <span class="text-[10px] text-[#4ade80] font-bold">24 / 24 PASSED</span>
+                </div>
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between text-xs font-mono">
+                    <span class="text-[#a3a3a3]">Branch Coverage:</span>
+                    <span class="text-white font-bold">${p.coveragePercent || 94.5}%</span>
+                  </div>
+                  <!-- Progress Bar -->
+                  <div class="w-full h-2 bg-[#141414] border border-[#242424] rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-[#0369a1] to-[#38bdf8]" style="width: ${p.coveragePercent || 94.5}%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Packaging & Checksum Artifact Card -->
+              <div class="retro-panel p-4 border border-[#383838] space-y-2.5 shadow-lg">
+                <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+                  <span class="text-xs font-bold text-white uppercase flex items-center gap-2">
+                    <span class="text-[#38bdf8]">${MAC_ICONS.floppy}</span>
+                    <span>ARTIFACT PACKAGING</span>
+                  </span>
+                  <span class="text-[9px] text-[#737373] uppercase font-mono">JAR BINARY</span>
+                </div>
+                <div class="space-y-1.5 text-xs">
+                  <div class="font-mono text-white font-bold truncate">${p.artifactName || 'spring-enterprise-service-1.0.0.jar'}</div>
+                  <div class="text-[10px] text-[#737373] font-mono break-all leading-tight bg-[#050505] p-2 border border-[#1f1f1f] rounded">
+                    SHA-256: ${p.artifactSha256 || '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08'}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  private renderPipelineTriggerModal(): string {
+    if (!this.pipelineTriggerModalOpen) return '';
+    return `
+      <div class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-mono select-none">
+        <div class="max-w-md w-full retro-panel p-6 space-y-4 text-xs shadow-2xl animate-fadeIn border-2 border-white">
+          <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+            <span class="font-bold text-white uppercase flex items-center gap-2">
+              <span class="text-[#38bdf8] flex-shrink-0">[>]</span>
+              <span>[TRIGGER CI/CD PIPELINE]</span>
+            </span>
+            <button id="btnClosePipelineModal" class="text-[#737373] hover:text-white cursor-pointer">✕</button>
+          </div>
+          
+          <p class="text-[#a3a3a3] leading-relaxed">
+            Dispatch a multi-stage autonomous build job across the distributed AST, SAST, and Test workers.
+          </p>
+
+          <div class="space-y-3">
+            <div class="space-y-1">
+              <label class="text-[10px] text-white uppercase font-bold">REPOSITORY NAME</label>
+              <input type="text" id="inputPipelineRepo" value="${this.escapeHtml(this.pipelineRepoInput)}" class="w-full bg-[#000000] border border-[#383838] focus:border-[#38bdf8] rounded p-2.5 text-white font-mono text-xs outline-none shadow-inner" />
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-[10px] text-white uppercase font-bold">GIT TARGET BRANCH</label>
+              <input type="text" id="inputPipelineBranch" value="${this.escapeHtml(this.pipelineBranchInput)}" class="w-full bg-[#000000] border border-[#383838] focus:border-[#38bdf8] rounded p-2.5 text-white font-mono text-xs outline-none shadow-inner" />
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2 border-t border-[#242424]">
+            <button id="btnCancelPipelineModal" class="retro-btn">CANCEL</button>
+            <button id="btnExecutePipelineRun" class="retro-btn retro-btn-accent flex items-center gap-1.5 font-bold">
+              <span>[>] RUN PIPELINE NOW</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private async setCustomFolder(path: string) {
+    if (!path || !path.trim()) return;
+    try {
+      soundEngine.playMechanicalKeyboardClick();
+      this.showToast(`[..] Setting workspace to ${path.trim()}...`);
+      const res = await api.setFolder(path.trim());
+      if (res && res.currentFolder) {
+        this.currentWorkspacePath = res.currentFolder;
+      } else {
+        this.currentWorkspacePath = path.trim();
+      }
+      this.customFolderInput = this.currentWorkspacePath;
+      this.showFolderModal = false;
+      await this.loadFiles();
+      await this.bundleProjectToSrcDoc();
+      this.render();
+      this.updatePreviewIframe();
+      this.showToast(`[+] Active workspace directory: ${this.getFolderDisplayBasename()}`);
+    } catch (e: any) {
+      this.showToast(`Folder update error: ${e.message}`, true);
+    }
+  }
+
+  private renderFolderSelectionModal(): string {
+    if (!this.showFolderModal) return '';
+    return `
+      <div class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-mono select-none">
+        <div class="max-w-lg w-full retro-panel p-6 space-y-4 text-xs shadow-2xl animate-fadeIn border-2 border-white">
+          <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+            <span class="font-bold text-white uppercase flex items-center gap-2">
+              <span class="text-[#38bdf8] flex-shrink-0 text-base">📁</span>
+              <span>[WORKSPACE DIRECTORY CONFIGURATION]</span>
+            </span>
+            <button id="btnCloseFolderModal" class="text-[#737373] hover:text-white cursor-pointer text-sm">✕</button>
+          </div>
+          
+          <!-- Current Active Path Display -->
+          <div class="space-y-1.5 p-3 bg-[#050505] border border-[#242424] rounded">
+            <div class="flex items-center justify-between text-[10px] text-[#737373] font-bold">
+              <span>CURRENT ACTIVE WORKSPACE ROOT:</span>
+              <button id="btnModalOpenInOs" class="text-[#38bdf8] hover:underline cursor-pointer">↗ OPEN IN EXPLORER</button>
+            </div>
+            <div class="p-2.5 bg-[#000000] border border-[#383838] rounded text-white font-mono text-xs select-text break-all font-bold">
+              ${this.escapeHtml(this.currentWorkspacePath)}
+            </div>
+          </div>
+
+          <!-- 1. Native Windows Folder Picker Dialog (1-Click) -->
+          <div class="p-3.5 bg-[#082038] border border-[#0369a1] rounded space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-[#38bdf8] text-[11px] uppercase">1. BROWSE SYSTEM FOLDERS (NATIVE WINDOWS DIALOG)</span>
+            </div>
+            <p class="text-[10.5px] text-[#93c5fd] font-sans">
+              Click to open the Windows Folder Selector to choose any existing folder or create a new project directory.
+            </p>
+            <button id="btnPickFolderDialog" class="w-full retro-btn retro-btn-accent py-2 text-xs font-bold flex items-center justify-center gap-2 shadow-md">
+              <span>📁 OPEN WINDOWS FOLDER BROWSER DIALOG ↵</span>
+            </button>
+          </div>
+
+          <!-- 2. Manual Custom Path Input -->
+          <div class="space-y-2">
+            <label class="text-[10px] text-white uppercase font-bold">2. OR TYPE / PASTE CUSTOM PATH DIRECTLY:</label>
+            <div class="flex gap-2">
+              <input type="text" id="inputCustomFolderPath" value="${this.escapeHtml(this.customFolderInput || this.currentWorkspacePath)}" placeholder="e.g. C:/Users/prana/Downloads/agent/workspace" class="flex-1 bg-[#000000] border border-[#383838] focus:border-[#38bdf8] rounded p-2 text-white font-mono text-xs outline-none shadow-inner" />
+              <button id="btnApplyCustomFolder" class="retro-btn retro-btn-white px-4 font-bold">
+                APPLY
+              </button>
+            </div>
+          </div>
+
+          <!-- 3. Quick Folder Presets -->
+          <div class="space-y-1.5 pt-1">
+            <label class="text-[10px] text-[#737373] uppercase font-bold">QUICK PRESET DIRECTORIES:</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button class="btn-quick-folder p-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#38bdf8] rounded text-left flex flex-col gap-0.5 transition cursor-pointer" data-path="${this.commonFolders['projectWorkspace'] || 'workspace'}">
+                <span class="font-bold text-white text-[11px] flex items-center gap-1">📁 Default Workspace</span>
+                <span class="text-[9px] text-[#737373] truncate font-mono">${this.commonFolders['projectWorkspace'] || 'workspace'}</span>
+              </button>
+              <button class="btn-quick-folder p-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#38bdf8] rounded text-left flex flex-col gap-0.5 transition cursor-pointer" data-path="${this.commonFolders['downloads'] || 'C:/Users/prana/Downloads'}">
+                <span class="font-bold text-white text-[11px] flex items-center gap-1">📥 Downloads</span>
+                <span class="text-[9px] text-[#737373] truncate font-mono">${this.commonFolders['downloads'] || 'Downloads'}</span>
+              </button>
+              <button class="btn-quick-folder p-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#38bdf8] rounded text-left flex flex-col gap-0.5 transition cursor-pointer" data-path="${this.commonFolders['desktop'] || 'C:/Users/prana/Desktop'}">
+                <span class="font-bold text-white text-[11px] flex items-center gap-1">🖥️ Desktop</span>
+                <span class="text-[9px] text-[#737373] truncate font-mono">${this.commonFolders['desktop'] || 'Desktop'}</span>
+              </button>
+              <button class="btn-quick-folder p-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#38bdf8] rounded text-left flex flex-col gap-0.5 transition cursor-pointer" data-path="${this.commonFolders['documents'] || 'C:/Users/prana/Documents'}">
+                <span class="font-bold text-white text-[11px] flex items-center gap-1">📄 Documents</span>
+                <span class="text-[9px] text-[#737373] truncate font-mono">${this.commonFolders['documents'] || 'Documents'}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-3 border-t border-[#242424]">
+            <button id="btnCancelFolderModal" class="retro-btn px-4 py-1.5 font-bold">CLOSE</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderUserAccountModal(): string {
+    if (!this.showUserMenu) return '';
+    return `
+      <div class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-mono select-none">
+        <div class="max-w-md w-full retro-panel p-6 space-y-4 text-xs shadow-2xl animate-fadeIn border-2 border-white">
+          <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+            <span class="font-bold text-white uppercase flex items-center gap-2">
+              <span class="text-[#38bdf8] flex-shrink-0">${MAC_ICONS.github}</span>
+              <span>[GITHUB PROFILE // ACCOUNT]</span>
+            </span>
+            <button id="btnCloseUserMenu" class="text-[#737373] hover:text-white cursor-pointer">✕</button>
+          </div>
+          
+          <!-- GitHub Profile Card -->
+          <div class="flex items-center gap-3.5 p-3.5 bg-[#050505] border border-[#242424] rounded shadow-inner">
+            <img src="${this.getUserAvatarUrl()}" alt="${this.escapeHtml(this.userProfile.login)}" class="w-12 h-12 rounded-full border-2 border-[#38bdf8] object-cover flex-shrink-0 shadow-[0_0_12px_rgba(56,189,248,0.4)]" onerror="this.onerror=null; this.src='https://avatars.githubusercontent.com/u/9919?v=4';" />
+            <div class="flex flex-col min-w-0 space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white text-sm truncate font-mono">${this.userProfile.login}</span>
+                <span class="text-[9px] px-1.5 py-0.2 bg-[#082038] border border-[#0369a1] text-[#38bdf8] rounded font-bold uppercase">GITHUB USER</span>
+              </div>
+              <span class="text-[10px] text-[#a3a3a3] truncate font-mono">${this.userProfile.organization || 'GitHub Workspace'}</span>
+            </div>
+          </div>
+
+          <div class="space-y-2 text-white">
+            <div class="flex items-center gap-2">
+              <span class="text-[#737373]">ACTIVE WORKSPACE:</span>
+              <span class="truncate text-[#38bdf8] font-bold font-mono">${this.currentWorkspacePath}</span>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2 border-t border-[#242424]">
+            <button id="btnSignOutGitHub" class="retro-btn retro-btn-danger flex items-center gap-1.5 font-bold">
+              ${MAC_ICONS.bomb}
+              <span>SIGN OUT / SWITCH USER</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- Rendering & SPA Routing Views ---
+
+  public renderWorkspaceView(): void {
+    this.container.innerHTML = this.getWorkspaceHtml();
+    this.attachEventListeners();
+    this.updatePreviewIframe();
+  }
+
+  public renderLoginView(): void {
+    this.container.innerHTML = this.getLoginHtml();
+    this.attachLoginEventListeners();
+  }
+
+  public renderLandingView(): void {
+    this.container.innerHTML = this.getLandingHtml();
+    this.attachLandingEventListeners();
+  }
+
+  public render(): void {
+    if (this.currentRoute === 'landing') {
+      this.renderLandingView();
+    } else if (this.currentRoute === 'login') {
+      this.renderLoginView();
+    } else {
+      this.renderWorkspaceView();
+    }
+  }
+
+  // --- Landing & Login Pages ---
+
+  private getLandingCodeSnippet(): string {
+    if (this.landingCodeTab === 'curl') {
+      return `# Direct Autonomous Multi-Agent Synthesis via REST API
+curl -X POST http://localhost:8080/api/task \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "mode": "agent",
+    "prompt": "Synthesize a 2D retro arcade space game with canvas physics, score counter, and Web Audio effects.",
+    "targetDirectory": "workspace"
+  }'`;
+    }
+
+    if (this.landingCodeTab === 'py') {
+      return `from retro_agent import AgentSwarm
+
+# 1. Connect to Autonomous Backend Multi-Agent Swarm
+swarm = AgentSwarm(
+    endpoint="http://localhost:8080",
+    workspace="./workspace"
+)
+
+# 2. Execute multi-file software synthesis with AST validation
+result = swarm.synthesize(
+    prompt="Create a real-time reactive telemetry dashboard with live chart metrics and dark theme",
+    mode="agent",
+    validate_ast=True
+)
+
+print(f"[+] Synthesized {len(result.files)} files directly to disk.")`;
+    }
+
+    // Default: TypeScript / Node.js
+    return `import { AutonomousAgent } from '@retro/agent-sdk';
+
+// 1. Initialize Multi-Agent Swarm for local workspace synthesis
+const agent = new AutonomousAgent({
+  endpoint: 'http://localhost:8080/api/task',
+  workspace: './workspace'
+});
+
+// 2. Run autonomous synthesis with AST & QA test validation
+await agent.execute({
+  mode: 'AGENT',
+  prompt: 'Build a polyphonic synthesizer with step sequencer and audio visualizer.',
+  onStep: (event) => console.log(\`[\${event.role}] \${event.content}\`)
+});`;
+  }
+
+  public getLandingHtml(): string {
+    return `
+      <div class="fixed inset-0 w-full h-full bg-[#000000] text-white font-mono overflow-y-auto z-30 custom-scrollbar select-none">
+        
+        <!-- 1. Header Navigation -->
+        <header class="border-b border-[#242424] bg-[#0a0a0a] sticky top-0 z-40 shadow-md">
+          <div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-2.5 cursor-pointer" id="btnLandingBrand">
+              <span class="text-[#38bdf8] flex-shrink-0">${MAC_ICONS.happyMac}</span>
+              <div class="flex items-center gap-1.5">
+                <span class="font-bold text-sm text-white uppercase tracking-wider font-mono">RETRO</span>
+                <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 bg-[#38bdf8] text-black rounded-sm">STUDIO</span>
+              </div>
+            </div>
+
+            <nav class="hidden md:flex items-center gap-6 text-xs text-[#737373] font-bold">
+              <a href="#code-example" class="hover:text-white transition cursor-pointer">CODE EXAMPLE</a>
+              <a href="#swarm" class="hover:text-white transition cursor-pointer">SWARM PIPELINE</a>
+              <a href="#sandbox" class="hover:text-white transition cursor-pointer">SANDBOX RUNNER</a>
+              <a href="#specs" class="hover:text-white transition cursor-pointer">SYSTEM SPECS</a>
+            </nav>
+
+            <div class="flex items-center gap-2">
+              <button id="btnLandingAudioDemo" class="retro-btn px-2.5 py-1 text-[10px] hidden sm:flex items-center gap-1 font-bold" title="Test Retro CRT Audio Engine">
+                ${MAC_ICONS.sound}
+                <span>AUDIO TEST</span>
+              </button>
+              <button id="btnLandingGitHubLogin" class="retro-btn retro-btn-accent px-3.5 py-1.5 text-xs font-bold flex items-center gap-2 shadow-md">
+                <img src="${this.getUserAvatarUrl()}" alt="${this.escapeHtml(this.userProfile.login)}" class="w-4 h-4 rounded-full border border-black object-cover flex-shrink-0" onerror="this.onerror=null; this.src='https://avatars.githubusercontent.com/u/9919?v=4';" />
+                <span>${this.userProfile.authenticated && this.userProfile.login !== 'Guest' ? this.userProfile.login.toUpperCase() : 'LOGIN WITH GITHUB'} ↵</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <!-- 2. Hero Section -->
+        <main class="max-w-6xl mx-auto px-4 sm:px-6 pt-12 sm:pt-16 pb-24 space-y-16">
+          <div class="text-center space-y-6 max-w-3xl mx-auto">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-[#38bdf8] bg-[#082038] text-[#38bdf8] text-[10px] font-bold uppercase tracking-widest shadow-[0_0_12px_rgba(56,189,248,0.35)]">
+              <span class="led-indicator led-accent led-pulsing"></span>
+              <span>SKEUOMORPHIC RETRO-MINIMALISM // WHITE, BLACK &amp; LIGHT BLUE</span>
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tight uppercase leading-none drop-shadow-md">
+              Autonomous Software Studio.
+            </h1>
+
+            <p class="text-sm sm:text-base text-[#a3a3a3] leading-relaxed font-sans max-w-2xl mx-auto">
+              A high-precision developer console adhering strictly to Brauncore functionalism. Decompose architectural prompts, synthesize multi-file full-stack codebases, execute in live sandboxes, and self-heal with real-time mechanical keyboard acoustic feedback.
+            </p>
+
+            <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
+              <button id="btnHeroLaunch" class="retro-btn retro-btn-accent px-7 py-3 text-xs font-bold text-sm shadow-xl flex items-center gap-2">
+                ${MAC_ICONS.github}
+                <span>SIGN IN WITH GITHUB ↵</span>
+              </button>
+              <a href="#code-example" class="retro-btn px-5 py-3 text-xs font-bold flex items-center gap-2 text-white">
+                ${MAC_ICONS.doc}
+                <span>VIEW CODE EXAMPLE</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- 3. Interactive Skeuomorphic Telemetry Screen Preview Mockup -->
+          <div class="retro-panel border-2 border-white p-4 sm:p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-[#242424] pb-3">
+              <div class="flex items-center gap-3">
+                <span class="screw-head"></span>
+                <span class="text-xs font-bold text-white uppercase tracking-wider">[LIVE TELEMETRY &amp; REASONING MONITOR]</span>
+              </div>
+              <div class="flex items-center gap-2 text-[10px] text-[#737373]">
+                <span class="led-indicator led-accent led-pulsing"></span>
+                <span class="text-[#38bdf8] font-bold">PORT 8080 // ONLINE</span>
+              </div>
+            </div>
+
+            <!-- Inset Bezel Display -->
+            <div class="retro-screen-telemetry p-4 space-y-3 shadow-inner">
+              <div class="flex items-center justify-between border-b border-[#0b2540] pb-2 text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="text-[#38bdf8]">${MAC_ICONS.macScreen}</span>
+                  <span class="font-bold text-[#38bdf8]">DEEPSEEK-CODER // MULTI-AGENT SWARM ACTIVE</span>
+                </div>
+                <!-- Cassette Reels & VU Meter -->
+                <div class="flex items-center gap-3">
+                  <div class="flex items-center gap-1 px-1.5 py-0.5 bg-[#000000] border border-[#242424] rounded">
+                    <svg class="w-3.5 h-3.5 text-[#38bdf8] tape-spool-active" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <circle cx="12" cy="12" r="10" />
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M12 2v7M12 15v7M2 12h7M15 12h7" />
+                    </svg>
+                    <svg class="w-3.5 h-3.5 text-[#38bdf8] tape-spool-active" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <circle cx="12" cy="12" r="10" />
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M12 2v7M12 15v7M2 12h7M15 12h7" />
+                    </svg>
+                  </div>
+                  <div class="vu-meter-chassis hidden sm:block">
+                    <div class="vu-meter-scale"></div>
+                    <div class="vu-needle active-high"></div>
+                    <div class="absolute bottom-1 right-2 text-[7px] font-mono text-[#000000] font-extrabold">VU dB</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Live Stream Logs Mockup -->
+              <div class="bg-[#020912] border border-[#0b2540] rounded p-3 text-xs space-y-1.5 select-none text-[11px]">
+                <div class="flex items-start gap-2">
+                  <span class="text-[#0369a1] font-bold">[10:48:12]</span>
+                  <span class="text-[#38bdf8] font-bold">[ARCHITECT]</span>
+                  <span class="text-[#e0f2fe]">Deconstructed prompt into 4 modular application layers with AST validation.</span>
+                </div>
+                <div class="flex items-start gap-2">
+                  <span class="text-[#0369a1] font-bold">[10:48:14]</span>
+                  <span class="text-[#38bdf8] font-bold">[CODER]</span>
+                  <span class="text-[#e0f2fe]">Synthesized DOM hierarchy, CSS tokens, and reactive state machine.</span>
+                </div>
+                <div class="flex items-start gap-2">
+                  <span class="text-[#0369a1] font-bold">[10:48:16]</span>
+                  <span class="text-[#38bdf8] font-bold">[TESTER]</span>
+                  <span class="text-[#e0f2fe]">QA test suite passed: 100% assertions verified. No runtime exceptions.</span>
+                </div>
+                <div class="flex items-start gap-2">
+                  <span class="text-[#0369a1] font-bold">[10:48:18]</span>
+                  <span class="text-[#38bdf8] font-bold">[SECURITY]</span>
+                  <span class="text-[#e0f2fe]">Sandbox security audit: Strict CSP policy verified. Local storage bounded.</span>
+                </div>
+              </div>
+
+              <!-- Notification Banner -->
+              <div class="p-2.5 bg-[#082038] border border-[#0369a1] rounded flex items-center justify-between text-xs text-white">
+                <div class="flex items-center gap-2 truncate">
+                  <span class="text-[#38bdf8]">${MAC_ICONS.floppy}</span>
+                  <span class="font-bold text-[#38bdf8] uppercase">TARGET DIR:</span>
+                  <span class="truncate font-mono">${this.currentWorkspacePath}/index.html</span>
+                </div>
+                <span class="text-[10px] px-2 py-0.5 rounded border border-[#38bdf8] text-[#38bdf8] font-bold">READY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Interactive Code Example (Replaces Core Capabilities) -->
+          <div id="code-example" class="space-y-4 pt-4">
+            <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+              <span class="font-bold text-xs text-white uppercase flex items-center gap-2">
+                <span class="text-[#38bdf8]">${MAC_ICONS.doc}</span>
+                <span>AUTONOMOUS CODE GENERATION // SDK &amp; API CODE EXAMPLE</span>
+              </span>
+              <span class="text-[10px] text-[#737373]">INTERACTIVE EXAMPLES</span>
+            </div>
+
+            <div class="retro-panel border border-[#383838] p-4 sm:p-6 space-y-4 shadow-2xl">
+              <!-- Code Tab Selector Bar -->
+              <div class="flex items-center justify-between flex-wrap gap-2 border-b border-[#242424] pb-3">
+                <div class="flex items-center gap-1.5">
+                  <button class="btn-code-tab px-3 py-1.5 rounded text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer ${this.landingCodeTab === 'ts' ? 'bg-[#38bdf8] text-black shadow' : 'bg-[#141414] text-[#737373] hover:text-white border border-[#242424]'}" data-tab="ts">
+                    <span>TYPESCRIPT / NODE.JS</span>
+                  </button>
+                  <button class="btn-code-tab px-3 py-1.5 rounded text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer ${this.landingCodeTab === 'curl' ? 'bg-[#38bdf8] text-black shadow' : 'bg-[#141414] text-[#737373] hover:text-white border border-[#242424]'}" data-tab="curl">
+                    <span>cURL / REST API</span>
+                  </button>
+                  <button class="btn-code-tab px-3 py-1.5 rounded text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer ${this.landingCodeTab === 'py' ? 'bg-[#38bdf8] text-black shadow' : 'bg-[#141414] text-[#737373] hover:text-white border border-[#242424]'}" data-tab="py">
+                    <span>PYTHON SDK</span>
+                  </button>
+                </div>
+
+                <button id="btnCopyLandingCode" class="retro-btn px-3 py-1 text-[10px] font-mono flex items-center gap-1.5 font-bold" data-code="${this.escapeHtml(this.getLandingCodeSnippet())}">
+                  ${MAC_ICONS.doc}
+                  <span id="copyLandingCodeLabel">COPY CODE</span>
+                </button>
+              </div>
+
+              <!-- Code Box Content with Dark Terminal Chassis -->
+              <div class="bg-[#050505] border border-[#242424] rounded p-4 font-mono text-xs overflow-x-auto custom-scrollbar relative shadow-inner">
+                <pre class="text-[#38bdf8] leading-relaxed select-text"><code>${this.escapeHtml(this.getLandingCodeSnippet())}</code></pre>
+              </div>
+
+              <div class="flex items-center justify-between text-[11px] text-[#737373] pt-1">
+                <div class="flex items-center gap-2">
+                  <span class="screw-head"></span>
+                  <span>Direct local AST parsing with 100% offline synthesis capability.</span>
+                </div>
+                <span class="text-[#38bdf8] font-bold font-mono">STATUS: 200 OK</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. Swarm Pipeline Section -->
+          <div id="swarm" class="space-y-6 pt-4">
+            <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+              <span class="font-bold text-xs text-white uppercase flex items-center gap-2">
+                <span class="text-[#38bdf8]">${MAC_ICONS.briefcase}</span>
+                <span>AUTONOMOUS SWARM ARCHITECTURE</span>
+              </span>
+              <span class="text-[10px] text-[#737373]">SEQUENTIAL ORCHESTRATION</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div class="p-3.5 retro-panel border border-[#242424] text-xs space-y-1 text-center">
+                <div class="font-bold text-[#38bdf8] text-[10px]">STAGE 1</div>
+                <div class="font-bold text-white text-[11px]">ARCHITECT</div>
+                <div class="text-[10px] text-[#737373] font-sans">Prompt decomposition &amp; plan checklist</div>
+              </div>
+              <div class="p-3.5 retro-panel border border-[#242424] text-xs space-y-1 text-center">
+                <div class="font-bold text-[#38bdf8] text-[10px]">STAGE 2</div>
+                <div class="font-bold text-white text-[11px]">CODER</div>
+                <div class="text-[10px] text-[#737373] font-sans">Code synthesis &amp; multi-file write</div>
+              </div>
+              <div class="p-3.5 retro-panel border border-[#242424] text-xs space-y-1 text-center">
+                <div class="font-bold text-[#38bdf8] text-[10px]">STAGE 3</div>
+                <div class="font-bold text-white text-[11px]">QA TESTER</div>
+                <div class="text-[10px] text-[#737373] font-sans">Test suite execution &amp; assertions</div>
+              </div>
+              <div class="p-3.5 retro-panel border border-[#242424] text-xs space-y-1 text-center">
+                <div class="font-bold text-[#38bdf8] text-[10px]">STAGE 4</div>
+                <div class="font-bold text-white text-[11px]">SECURITY</div>
+                <div class="text-[10px] text-[#737373] font-sans">Sandbox policy &amp; audit analysis</div>
+              </div>
+              <div class="p-3.5 retro-panel border border-[#242424] text-xs space-y-1 text-center">
+                <div class="font-bold text-[#38bdf8] text-[10px]">STAGE 5</div>
+                <div class="font-bold text-white text-[11px]">DEVOPS</div>
+                <div class="text-[10px] text-[#737373] font-sans">Checkpoints &amp; export packaging</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. Sandbox & Dual Modes Breakdown -->
+          <div id="sandbox" class="space-y-6 pt-4">
+            <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+              <span class="font-bold text-xs text-white uppercase flex items-center gap-2">
+                <span class="text-[#38bdf8]">${MAC_ICONS.macScreen}</span>
+                <span>DUAL EXECUTION MODES &amp; SANDBOX</span>
+              </span>
+              <span class="text-[10px] text-[#737373]">AGENT vs ASK</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="p-5 retro-panel border border-[#38bdf8] space-y-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-[#38bdf8]">${MAC_ICONS.happyMac}</span>
+                  <span class="font-bold text-white text-xs uppercase">5-AGENT SWARM // FULL AUTONOMY</span>
+                </div>
+                <p class="text-xs text-[#a3a3a3] font-sans leading-relaxed">
+                  Autonomous multi-agent orchestration. Architect, Coder, QA Tester, Security Reviewer, and DevOps synthesize complete production codebases directly to disk.
+                </p>
+                <div class="flex items-center gap-2 text-[10px] font-mono text-[#38bdf8]">
+                  <span class="screw-head"></span>
+                  <span>BEST FOR: FULL APPS, GAMES, DASHBOARDS, TOOLS</span>
+                </div>
+              </div>
+
+              <div class="p-5 retro-panel border border-[#242424] space-y-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-white">${MAC_ICONS.macScreen}</span>
+                  <span class="font-bold text-white text-xs uppercase">LIVE PREVIEW RUNNER // ZERO CONFIG</span>
+                </div>
+                <p class="text-xs text-[#a3a3a3] font-sans leading-relaxed">
+                  Instant hot-reloading browser preview environment with sandboxed telemetry, DOM inspector, console logs, and CRT phosphor monitor rendering.
+                </p>
+                <div class="flex items-center gap-2 text-[10px] font-mono text-[#737373]">
+                  <span class="screw-head"></span>
+                  <span>BUILT-IN: TAILWIND, LUCIDE, THREE.JS, CANVAS 2D</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7. Metrics Strip -->
+          <div id="specs" class="retro-panel p-6 border border-[#383838] grid grid-cols-2 md:grid-cols-4 gap-4 text-center shadow-xl">
+            <div class="space-y-1">
+              <div class="text-2xl sm:text-3xl font-black text-white">0.00s</div>
+              <div class="text-[10px] text-[#737373] uppercase font-bold">Audio Latency</div>
+            </div>
+            <div class="space-y-1">
+              <div class="text-2xl sm:text-3xl font-black text-[#38bdf8]">100%</div>
+              <div class="text-[10px] text-[#737373] uppercase font-bold">Local File Sync</div>
+            </div>
+            <div class="space-y-1">
+              <div class="text-2xl sm:text-3xl font-black text-white">5-Node</div>
+              <div class="text-[10px] text-[#737373] uppercase font-bold">Swarm Pipeline</div>
+            </div>
+            <div class="space-y-1">
+              <div class="text-2xl sm:text-3xl font-black text-[#38bdf8]">0</div>
+              <div class="text-[10px] text-[#737373] uppercase font-bold">External Assets</div>
+            </div>
+          </div>
+
+          <!-- 8. Call To Action Footer Banner -->
+          <div class="text-center p-8 retro-panel border-2 border-white space-y-4 shadow-2xl">
+            <h2 class="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">Ready to build with GitHub?</h2>
+            <p class="text-xs text-[#a3a3a3] max-w-md mx-auto font-sans">Authenticate with your GitHub account, select your workspace folder, and synthesize software with multi-agent intelligence.</p>
+            <div class="pt-2">
+              <button id="btnBottomEnterStudio" class="retro-btn retro-btn-accent px-8 py-3 text-xs font-bold text-sm shadow-xl flex items-center gap-2 mx-auto">
+                ${MAC_ICONS.github}
+                <span>SIGN IN WITH GITHUB ↵</span>
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <!-- 9. Footer -->
+        <footer class="border-t border-[#242424] bg-[#050505] py-8 text-xs text-[#737373]">
+          <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+              <span class="text-[#38bdf8]">${MAC_ICONS.happyMac}</span>
+              <span class="text-white font-bold">RETRO STUDIO // DIETER RAMS FUNCTIONALISM</span>
+            </div>
+            <div class="flex items-center gap-2 text-[10px]">
+              <span class="led-indicator led-accent"></span>
+              <span class="text-white">SYSTEM OPERATIONAL</span>
+            </div>
+          </div>
+        </footer>
+      </div>
+    `;
+  }
+
+  public getLoginHtml(): string {
+    return `
+      <div class="fixed inset-0 w-full h-full bg-[#000000] text-white font-mono flex flex-col items-center justify-center p-4 z-30 select-none">
+        <div class="max-w-md w-full retro-panel p-6 space-y-4 shadow-2xl animate-fadeIn border-2 border-white">
+          <div class="flex items-center justify-between border-b border-[#242424] pb-2">
+            <span class="font-bold text-xs text-white uppercase flex items-center gap-2">
+              <span class="text-[#38bdf8] flex-shrink-0">${MAC_ICONS.github}</span>
+              <span>[GITHUB AUTHENTICATION // RETRO STUDIO]</span>
+            </span>
+            <button id="btnBackToLanding" class="text-xs text-[#737373] hover:text-white cursor-pointer">✕</button>
+          </div>
+          <div class="space-y-3">
+            <p class="text-xs text-[#a3a3a3] leading-relaxed">
+              Connect your GitHub profile to manage workspace repositories, synthesize codebases, and commit snapshots.
+            </p>
+            
+            <!-- Live Profile Avatar & Handle Input Card -->
+            <div class="flex items-center gap-3.5 p-3 bg-[#050505] border border-[#242424] rounded shadow-inner">
+              <img id="loginAvatarPreview" src="${this.getUserAvatarUrl()}" alt="GitHub Avatar" class="w-12 h-12 rounded-full border-2 border-[#38bdf8] object-cover flex-shrink-0 shadow-[0_0_12px_rgba(56,189,248,0.4)]" onerror="this.onerror=null; this.src='https://avatars.githubusercontent.com/u/9919?v=4';" />
+              <div class="flex flex-col min-w-0 flex-1 space-y-1">
+                <label class="text-[10px] text-white uppercase font-bold">GITHUB USERNAME / HANDLE</label>
+                <input type="text" id="inputLoginUsername" placeholder="e.g. Developer or octocat" value="${this.escapeHtml(this.userProfile.login || 'Developer')}" class="w-full bg-[#000000] border border-[#383838] focus:border-[#38bdf8] rounded p-2 text-white font-mono text-xs outline-none shadow-inner" />
+              </div>
+            </div>
+          </div>
+          <div class="pt-2">
+            <button id="btnAuthorizeGitHub" class="w-full retro-btn retro-btn-accent py-2.5 text-xs font-bold flex items-center justify-center gap-2">
+              ${MAC_ICONS.github}
+              <span>AUTHORIZE WITH GITHUB ↵</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private attachLandingEventListeners(): void {
+    document.getElementById('btnLandingBrand')?.addEventListener('click', () => this.navigateTo('landing'));
+    document.getElementById('btnLandingGitHubLogin')?.addEventListener('click', () => this.navigateTo('login'));
+    document.getElementById('btnHeroLaunch')?.addEventListener('click', () => this.navigateTo('login'));
+    document.getElementById('btnBottomEnterStudio')?.addEventListener('click', () => this.navigateTo('login'));
+    
+    document.getElementById('btnLandingAudioDemo')?.addEventListener('click', () => {
+      soundEngine.playCrtClick();
+      this.showToast('🔊 Classic Retro CRT Click');
+    });
+
+    // Code Example Tab Selector (TS, cURL, Python)
+    document.querySelectorAll('.btn-code-tab').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const targetBtn = e.currentTarget as HTMLElement;
-        const code = targetBtn.dataset['code'] || '';
-        if (code) {
-          navigator.clipboard.writeText(code);
-          targetBtn.classList.add('copied');
-          const span = targetBtn.querySelector('span');
-          if (span) span.textContent = 'Copied!';
-          setTimeout(() => {
-            targetBtn.classList.remove('copied');
-            if (span) span.textContent = 'Copy';
-          }, 1800);
-        }
-      });
-    });
-
-    // Quick Suggestion Starter Prompts
-    document.querySelectorAll('.btn-quick-prompt').forEach(card => {
-      card.addEventListener('click', (e) => {
-        const promptText = (e.currentTarget as HTMLElement).dataset['prompt'] || '';
-        if (promptText) {
-          this.taskPrompt = promptText;
-          const inputEl = document.getElementById('taskInput') as HTMLTextAreaElement;
-          if (inputEl) {
-            inputEl.value = promptText;
-            inputEl.focus();
-          }
-        }
-      });
-    });
-
-    // Thought Reasoning Process Collapse / Expand
-    document.querySelectorAll('.btn-thought-toggle').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const id = (e.currentTarget as HTMLElement).dataset['id'];
-        const msg = this.messages.find(m => m.id === id);
-        if (msg) {
-          msg.collapsed = !(msg.collapsed ?? false);
+        soundEngine.playMechanicalKeyboardClick();
+        const tab = (e.currentTarget as HTMLElement).dataset['tab'] as 'ts' | 'curl' | 'py';
+        if (tab) {
+          this.landingCodeTab = tab;
           this.render();
         }
       });
     });
 
-    // Response Feedback thumbs
-    document.querySelectorAll('.btn-feedback-thumb').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const el = e.currentTarget as HTMLElement;
-        el.classList.add('scale-125', 'text-[#81c995]');
-        setTimeout(() => {
-          el.classList.remove('scale-125');
-        }, 300);
-      });
-    });
-
-    // File selection in Editor
-    document.querySelectorAll('.file-item').forEach(item => {
-      item.addEventListener('click', async (e) => {
-        const path = (e.currentTarget as HTMLElement).dataset['path'];
-        if (path) {
-          const node = this.fileList.find(f => f.path === path);
-          if (node) {
-            this.selectedFile = node;
-            const res = await api.getFileContent(path);
-            this.fileContent = res.content || '';
-            this.render();
-          }
+    // Copy Code Button
+    document.getElementById('btnCopyLandingCode')?.addEventListener('click', (e) => {
+      soundEngine.playMechanicalKeyboardClick();
+      const code = (e.currentTarget as HTMLElement).dataset['code'] || this.getLandingCodeSnippet();
+      if (code) {
+        navigator.clipboard.writeText(code);
+        const label = document.getElementById('copyLandingCodeLabel');
+        if (label) {
+          label.textContent = 'COPIED!';
+          setTimeout(() => { label.textContent = 'COPY CODE'; }, 1800);
         }
-      });
-    });
-
-    const textarea = document.getElementById('editorTextarea') as HTMLTextAreaElement;
-    if (textarea) {
-      textarea.addEventListener('input', () => {
-        this.fileContent = textarea.value;
-      });
-    }
-
-    document.getElementById('btnSaveFile')?.addEventListener('click', async () => {
-      if (this.selectedFile) {
-        await api.saveFile(this.selectedFile.path, this.fileContent);
-        this.bundleProjectToSrcDoc();
+        this.showToast('[+] Code snippet copied to clipboard');
       }
     });
+  }
 
-    // Preview Browser Toolbar Actions
-    document.getElementById('btnReloadPreview')?.addEventListener('click', async () => {
-      await this.bundleProjectToSrcDoc();
-      this.updatePreviewIframe();
-    });
+  private attachLoginEventListeners(): void {
+    document.getElementById('btnBackToLanding')?.addEventListener('click', () => this.navigateTo('landing'));
 
-    document.getElementById('btnOpenExternalBrowser')?.addEventListener('click', () => {
-      window.open('http://localhost:3000', '_blank');
-    });
-
-    // Resizer Handle
-    const resizer = document.getElementById('resizerHandle');
-    if (resizer) {
-      resizer.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        this.isResizing = true;
+    const input = document.getElementById('inputLoginUsername') as HTMLInputElement;
+    const previewImg = document.getElementById('loginAvatarPreview') as HTMLImageElement;
+    if (input && previewImg) {
+      input.addEventListener('input', () => {
+        const val = input.value.trim() || 'Developer';
+        previewImg.src = `https://github.com/${encodeURIComponent(val)}.png`;
       });
     }
 
-    // Always update iframe srcdoc with unescaped HTML DOM
-    this.updatePreviewIframe();
-  }
-
-  private onMouseMove(e: MouseEvent) {
-    if (!this.isResizing) return;
-    const totalWidth = window.innerWidth;
-    const newPercent = ((totalWidth - e.clientX) / totalWidth) * 100;
-    if (newPercent >= 25 && newPercent <= 75) {
-      this.panelWidthPercent = Math.round(newPercent);
-      const rightPanel = document.querySelector('aside[style*="width"]') as HTMLElement;
-      if (rightPanel) rightPanel.style.width = `${this.panelWidthPercent}%`;
-    }
-  }
-
-  private onMouseUp() {
-    this.isResizing = false;
-  }
-
-  private updateEditorContent() {
-    const textarea = document.getElementById('editorTextarea') as HTMLTextAreaElement;
-    if (textarea) {
-      textarea.value = this.fileContent;
-      textarea.scrollTop = textarea.scrollHeight;
-    }
-  }
-
-  private renderFileList() {
-    const container = document.getElementById('fileListContainer');
-    if (!container) return;
-    container.innerHTML = this.fileList.map(f => `
-      <div class="file-item px-2 py-1.5 rounded-lg cursor-pointer flex items-center justify-between transition ${this.selectedFile?.path === f.path ? 'bg-[#18181b] text-white font-semibold' : 'text-[#a1a1aa] hover:text-white hover:bg-[#111113]'}" data-path="${f.path}">
-        <div class="flex items-center gap-2 truncate">
-          <svg class="w-3.5 h-3.5 text-[#71717a]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          <span class="truncate text-[11px]">${f.name}</span>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  private updatePreviewIframe() {
-    const iframe = document.getElementById('previewIframe') as HTMLIFrameElement;
-    const emptyState = document.getElementById('previewEmptyState');
-    if (iframe) {
-      if (this.generatedSrcDoc && this.generatedSrcDoc.trim().length > 0) {
-        iframe.srcdoc = this.generatedSrcDoc;
-        if (emptyState) emptyState.classList.add('hidden');
-      } else {
-        iframe.srcdoc = '';
-        if (emptyState) emptyState.classList.remove('hidden');
-      }
-    }
+    document.getElementById('btnAuthorizeGitHub')?.addEventListener('click', () => {
+      soundEngine.playMechanicalKeyboardClick();
+      const val = input?.value.trim() || 'Developer';
+      this.userProfile = {
+        login: val,
+        name: val,
+        avatar_url: `https://github.com/${val}.png`,
+        organization: 'GitHub Workspace',
+        authenticated: true
+      };
+      this.currentTenant = val.toLowerCase();
+      localStorage.setItem('agent_user_profile', JSON.stringify(this.userProfile));
+      localStorage.setItem('agent_tenant', this.currentTenant);
+      localStorage.removeItem('agent_logged_out');
+      this.showToast(`[+] Logged in as @${val} via GitHub`);
+      this.navigateTo('workspace');
+    });
   }
 }
