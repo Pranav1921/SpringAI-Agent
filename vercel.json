@@ -1,0 +1,11 @@
+{
+  "buildCommand": "cd agent-frontend && npm install && npm run build",
+  "outputDirectory": "agent-frontend/dist",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

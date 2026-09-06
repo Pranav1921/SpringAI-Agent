@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./agent-backend
+      dockerfile: Dockerfile
+    ports:
+      - "8090:8090"
+      - "3001:3001"
+    environment:
+      - SERVER_PORT=8090
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    volumes:
+      - ./workspace:/workspace
+
+  frontend:
+    build:
+      context: ./agent-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "4200:4200"
+    depends_on:
+      - backend
