@@ -501,8 +501,6 @@ export class WorkspaceComponent {
     // Subscribe to SSE telemetry events
     sseService.subscribe((event: AgentEvent) => this.handleAgentEvent(event));
 
-    window.addEventListener('mousemove', (e) => this.onMouseMove(e));
-    window.addEventListener('mouseup', () => this.onMouseUp());
     window.addEventListener('popstate', () => {
       this.handleRouteFromUrl();
       this.render();
@@ -3275,7 +3273,7 @@ export class WorkspaceComponent {
                 </div>
               </div>
 
-              <pre id="pipelineTerminalStream" class="flex-1 overflow-y-auto p-3 bg-[#000000] border border-[#1a1a1a] rounded text-[11px] font-mono leading-relaxed custom-scrollbar whitespace-pre-wrap select-text">${(this.pipelineTerminalLogs.length > 0 ? this.pipelineTerminalLogs : p.logs || []).map(l => this.formatTerminalLogLine(l)).join('\n')}</pre>
+              <pre id="pipelineTerminalStream" class="flex-1 overflow-y-auto p-3 bg-[#000000] border border-[#1a1a1a] rounded text-[11px] font-mono leading-relaxed custom-scrollbar whitespace-pre-wrap select-text">${(this.pipelineTerminalLogs.length > 0 ? this.pipelineTerminalLogs : p.logs || []).map((l: any) => this.formatTerminalLogLine(l)).join('\n')}</pre>
             </div>
 
             <!-- Right Governance, Test & SAST Cards (5 cols) -->
