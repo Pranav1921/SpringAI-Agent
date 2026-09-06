@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.springagent</groupId>
-	<artifactId>agent-backend</artifactId>
+	<artifactId>SpringAI-Agent</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>agent-backend</name>
-	<description>Autonomous AI Software Engineer Backend</description>
+	<name>SpringAI-Agent</name>
+	<description>SpringAI-Agent — Autonomous AI Software Engineer Backend</description>
 
 	<properties>
 		<java.version>17</java.version>

@@ -1276,8 +1276,8 @@ export class WorkspaceComponent {
               <div class="flex items-center gap-2">
                 <span class="text-[#38bdf8] flex-shrink-0">${MAC_ICONS.happyMac}</span>
                 <div class="flex items-center gap-1.5">
-                  <span class="font-extrabold text-xs text-white uppercase tracking-wider font-mono">RETRO</span>
-                  <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 bg-[#38bdf8] text-black rounded-sm">STUDIO</span>
+                  <span class="font-extrabold text-xs text-white uppercase tracking-wider font-mono">SPRINGAI</span>
+                  <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 bg-[#38bdf8] text-black rounded-sm">AGENT</span>
                 </div>
               </div>
               <span class="led-indicator ${this.isExecuting ? 'led-accent led-pulsing' : 'led-white'}"></span>
@@ -3920,7 +3920,7 @@ await agent.execute({
           <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-2">
               <span class="text-[#38bdf8]">${MAC_ICONS.happyMac}</span>
-              <span class="text-white font-bold">RETRO STUDIO // DIETER RAMS FUNCTIONALISM</span>
+              <span class="text-white font-bold">SPRINGAI-AGENT // AUTONOMOUS SOFTWARE ENGINEERING</span>
             </div>
             <div class="flex items-center gap-2 text-[10px]">
               <span class="led-indicator led-accent"></span>
@@ -3939,7 +3939,7 @@ await agent.execute({
           <div class="flex items-center justify-between border-b border-[#242424] pb-2">
             <span class="font-bold text-xs text-white uppercase flex items-center gap-2">
               <span class="text-[#38bdf8] flex-shrink-0">${MAC_ICONS.github}</span>
-              <span>[GITHUB AUTHENTICATION // RETRO STUDIO]</span>
+              <span>[GITHUB AUTHENTICATION // SPRINGAI-AGENT]</span>
             </span>
             <button id="btnBackToLanding" class="text-xs text-[#737373] hover:text-white cursor-pointer">✕</button>
           </div>
