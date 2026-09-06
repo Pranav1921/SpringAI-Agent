@@ -46,8 +46,8 @@ export class WorkspaceComponent {
   private currentTenant: string = 'default';
   private currentWorkspacePath: string = 'workspace';
   private commonFolders: Record<string, string> = {};
-  private currentRoute: 'landing' | 'login' | 'workspace' = 'workspace';
-  private isLandingPageOpen: boolean = false;
+  private currentRoute: 'landing' | 'login' | 'workspace' = 'landing';
+  private isLandingPageOpen: boolean = true;
 
   // Live Backend Telemetry & Reasoning State (DeepSeek / Ollama style)
   private executionElapsedSeconds: number = 0;
@@ -74,20 +74,13 @@ export class WorkspaceComponent {
     if (path === '/login' || path.startsWith('/login')) {
       this.currentRoute = 'login';
       this.isLandingPageOpen = false;
-    } else if (path === '/landing' || path.startsWith('/landing')) {
-      this.currentRoute = 'landing';
-      this.isLandingPageOpen = true;
     } else if (path === '/workspace' || path.startsWith('/workspace')) {
       this.currentRoute = 'workspace';
       this.isLandingPageOpen = false;
     } else {
-      if (localStorage.getItem('agent_logged_out') === 'true') {
-        this.currentRoute = 'landing';
-        this.isLandingPageOpen = true;
-      } else {
-        this.currentRoute = 'workspace';
-        this.isLandingPageOpen = false;
-      }
+      // Default to landing page for '/', '/landing', etc.
+      this.currentRoute = 'landing';
+      this.isLandingPageOpen = true;
     }
   }
 
@@ -3623,8 +3616,8 @@ await agent.execute({
             <div class="flex items-center gap-2.5 cursor-pointer" id="btnLandingBrand">
               <span class="text-[#38bdf8] flex-shrink-0">${MAC_ICONS.happyMac}</span>
               <div class="flex items-center gap-1.5">
-                <span class="font-bold text-sm text-white uppercase tracking-wider font-mono">RETRO</span>
-                <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 bg-[#38bdf8] text-black rounded-sm">STUDIO</span>
+                <span class="font-bold text-sm text-white uppercase tracking-wider font-mono">SPRINGAI</span>
+                <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 bg-[#38bdf8] text-black rounded-sm">AGENT</span>
               </div>
             </div>
 
@@ -3640,9 +3633,12 @@ await agent.execute({
                 ${MAC_ICONS.sound}
                 <span>AUDIO TEST</span>
               </button>
-              <button id="btnLandingGitHubLogin" class="retro-btn retro-btn-accent px-3.5 py-1.5 text-xs font-bold flex items-center gap-2 shadow-md">
+              <button id="btnLandingLaunchWorkspace" class="retro-btn retro-btn-accent px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 shadow-md">
+                <span>LAUNCH STUDIO ↵</span>
+              </button>
+              <button id="btnLandingGitHubLogin" class="retro-btn px-3 py-1.5 text-xs font-bold flex items-center gap-2 border border-[#242424] text-[#a3a3a3] hover:text-white">
                 <img src="${this.getUserAvatarUrl()}" alt="${this.escapeHtml(this.userProfile.login)}" class="w-4 h-4 rounded-full border border-black object-cover flex-shrink-0" onerror="this.onerror=null; this.src='https://avatars.githubusercontent.com/u/9919?v=4';" />
-                <span>${this.userProfile.authenticated && this.userProfile.login !== 'Guest' ? this.userProfile.login.toUpperCase() : 'LOGIN WITH GITHUB'} ↵</span>
+                <span>${this.userProfile.authenticated && this.userProfile.login !== 'Guest' ? this.userProfile.login.toUpperCase() : 'LOGIN'}</span>
               </button>
             </div>
           </div>
@@ -3653,7 +3649,7 @@ await agent.execute({
           <div class="text-center space-y-6 max-w-3xl mx-auto">
             <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-[#38bdf8] bg-[#082038] text-[#38bdf8] text-[10px] font-bold uppercase tracking-widest shadow-[0_0_12px_rgba(56,189,248,0.35)]">
               <span class="led-indicator led-accent led-pulsing"></span>
-              <span>SKEUOMORPHIC RETRO-MINIMALISM // WHITE, BLACK &amp; LIGHT BLUE</span>
+              <span>SPRINGAI-AGENT // AUTONOMOUS AI SOFTWARE ENGINEER</span>
             </div>
 
             <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tight uppercase leading-none drop-shadow-md">
@@ -3661,15 +3657,18 @@ await agent.execute({
             </h1>
 
             <p class="text-sm sm:text-base text-[#a3a3a3] leading-relaxed font-sans max-w-2xl mx-auto">
-              A high-precision developer console adhering strictly to Brauncore functionalism. Decompose architectural prompts, synthesize multi-file full-stack codebases, execute in live sandboxes, and self-heal with real-time mechanical keyboard acoustic feedback.
+              A high-precision developer console adhering strictly to Brauncore functionalism. Decompose architectural prompts, synthesize multi-file full-stack codebases, execute in live sandboxes, and push to GitHub autonomously.
             </p>
 
             <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
-              <button id="btnHeroLaunch" class="retro-btn retro-btn-accent px-7 py-3 text-xs font-bold text-sm shadow-xl flex items-center gap-2">
-                ${MAC_ICONS.github}
-                <span>SIGN IN WITH GITHUB ↵</span>
+              <button id="btnHeroLaunchWorkspace" class="retro-btn retro-btn-accent px-7 py-3 text-xs font-bold text-sm shadow-xl flex items-center gap-2">
+                <span>ENTER WORKSPACE // STUDIO ↵</span>
               </button>
-              <a href="#code-example" class="retro-btn px-5 py-3 text-xs font-bold flex items-center gap-2 text-white">
+              <button id="btnHeroLaunch" class="retro-btn px-5 py-3 text-xs font-bold flex items-center gap-2 text-white">
+                ${MAC_ICONS.github}
+                <span>SIGN IN WITH GITHUB</span>
+              </button>
+              <a href="#code-example" class="retro-btn px-5 py-3 text-xs font-bold flex items-center gap-2 text-[#737373] hover:text-white">
                 ${MAC_ICONS.doc}
                 <span>VIEW CODE EXAMPLE</span>
               </a>
@@ -3968,9 +3967,11 @@ await agent.execute({
 
   private attachLandingEventListeners(): void {
     document.getElementById('btnLandingBrand')?.addEventListener('click', () => this.navigateTo('landing'));
+    document.getElementById('btnLandingLaunchWorkspace')?.addEventListener('click', () => this.navigateTo('workspace'));
     document.getElementById('btnLandingGitHubLogin')?.addEventListener('click', () => this.navigateTo('login'));
+    document.getElementById('btnHeroLaunchWorkspace')?.addEventListener('click', () => this.navigateTo('workspace'));
     document.getElementById('btnHeroLaunch')?.addEventListener('click', () => this.navigateTo('login'));
-    document.getElementById('btnBottomEnterStudio')?.addEventListener('click', () => this.navigateTo('login'));
+    document.getElementById('btnBottomEnterStudio')?.addEventListener('click', () => this.navigateTo('workspace'));
     
     document.getElementById('btnLandingAudioDemo')?.addEventListener('click', () => {
       soundEngine.playCrtClick();
